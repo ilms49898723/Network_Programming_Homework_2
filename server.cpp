@@ -25,7 +25,7 @@ int main(int argc, char const** argv) {
     serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     serverAddr.sin_port = htons(port);
     // bind
-    bind(socketfd, reinterpret_cast<sockaddr*>(serverAddr), sizeof(serverAddr));
+    bind(socketfd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr));
     return 0;
 }
 
