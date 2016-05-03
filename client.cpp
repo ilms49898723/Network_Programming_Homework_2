@@ -4,8 +4,6 @@
 #include "global.h"
 #include "nputility.h"
 
-constexpr int MAXN = 2048;
-
 void clientFunc(const int& fd, sockaddr_in serverAddr);
 
 int main(int argc, char const** argv) {
@@ -42,8 +40,6 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
     FD_ZERO(&fdset);
     // server sockaddr*
     sockaddr* serverAddrp = reinterpret_cast<sockaddr*>(&serverAddr);
-    // server socklen_t
-    socklen_t serverLen;
     // loop to select
     for ( ; ; ) {
         // set socket fd
@@ -61,21 +57,14 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
         if (FD_ISSET(fileno(stdin), &fdset)) {
             // TODO: complete it
             char buffer[MAXN];
-            serverLen = sizeof(serverAddr);
             memset(buffer, 0, sizeof(buffer));
-            fgets(buffer, MAXN, stdin);
-            int m;
-            m = sendto(fd, buffer, 3, 0, serverAddrp, serverLen);
-            while ((m = recvfrom(fd, buffer, MAXN, 0, serverAddrp, &serverLen)) < 0) {
-                if (errno == EWOULDBLOCK) {
-                    fprintf(stderr, "socket timeout\n");
-                }
-                else {
-                    fprintf(stderr, "%s\n", strerror(errno));
-                }
+            if (fgets(buffer, MAXN, stdin) == NULL) {
+                continue;
             }
-            printf("%s\n", buffer);
-            sendto(fd, buffer, strlen(buffer), 0, serverAddrp, serverLen);
+            trimNewLine(buffer);
+            udpSendTo(fd, buffer, strlen(buffer), serverAddrp);
+            udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+            printf("recv %s from server\n", buffer);
         }
     }
 }

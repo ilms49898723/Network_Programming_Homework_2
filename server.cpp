@@ -4,8 +4,6 @@
 #include "global.h"
 #include "nputility.h"
 
-constexpr int MAXN = 2048;
-
 void serverFunc(const int& fd);
 
 int main(int argc, char const** argv) {
@@ -46,13 +44,10 @@ void serverFunc(const int& fd) {
     // client sockaddr_in and its (sockaddr*)&sockaddr_in
     sockaddr_in clientAddr;
     sockaddr* clientAddrp = reinterpret_cast<sockaddr*>(&clientAddr);
-    // client socket_len
-    socklen_t clientLen;
     // while loop to select
     for ( ; ; ) {
         // set socket fd
         FD_SET(fd, &fdset);
-        printf("after select\n");
         int nready = select(maxfdp1, &fdset, NULL, NULL, NULL);
         if (nready < 0) {
             if (errno == EINTR) {
@@ -65,14 +60,13 @@ void serverFunc(const int& fd) {
         if (FD_ISSET(fd, &fdset)) {
             // TODO: complete it
             char buffer[MAXN];
-            clientLen = sizeof(clientAddr);
             memset(buffer, 0, sizeof(buffer));
-            int n, m;
-            printf("wait recvfrom\n");
-            m = recvfrom(fd, buffer, MAXN, 0, clientAddrp, &clientLen);
+            udpRecvFrom(fd, buffer, MAXN, clientAddrp);
+            printf("recv %s from client\n", buffer);
+            memset(buffer, 0, sizeof(buffer));
             strcpy(buffer, "WELCOME!!!");
             printf("send %s to client\n", buffer);
-            n = sendto(fd, buffer, strlen(buffer), 0, clientAddrp, clientLen);
+            udpSendTo(fd, buffer, strlen(buffer), clientAddrp);
             printf("send complete!\n");
         }
     }
