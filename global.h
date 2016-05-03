@@ -17,5 +17,7 @@
 #include <unistd.h>
 #include <cerrno>
 
+constexpr int MAXN = 2048;
+
 #endif /* NETWORK_PROGRAMMING_GLOBAL_H_ */
 
