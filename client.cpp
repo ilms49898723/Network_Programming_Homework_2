@@ -3,8 +3,82 @@
 #include <cstring>
 #include "global.h"
 #include "nputility.h"
+#include "udpmessage.h"
+
+NPStage nowStage;
+
+class ClientUtility {
+    public:
+        static void udpRegister(const int& fd, sockaddr*& serverAddrp) {
+            char account[MAXN];
+            char password[MAXN];
+            char buffer[MAXN];
+            printf("Account: ");
+            if (fgets(account, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(account);
+            if (!isValidAcPw(account)) {
+                fprintf(stderr, "Account may not contain space or tab character\n");
+                return;
+            }
+            printf("Password: ");
+            if (fgets(password, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(password);
+            if (!isValidAcPw(password)) {
+                fprintf(stderr, "Password may not contain space or tab character\n");
+                return;
+            }
+            std::string msg = msgREGISTER + " " + account + " " + password;
+            udpSendTo(fd, msg.c_str(), msg.length(), serverAddrp);
+            udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+            printf("%s\n", buffer);
+        }
+        static void udpLogin(const int& fd, sockaddr*& serverAddrp) {
+            char account[MAXN];
+            char password[MAXN];
+            char buffer[MAXN];
+            printf("Account: ");
+            if (fgets(account, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(account);
+            if (!isValidAcPw(account)) {
+                fprintf(stderr, "Account may not contain space or tab character\n");
+                return;
+            }
+            printf("Password: ");
+            if (fgets(password, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(password);
+            if (!isValidAcPw(password)) {
+                fprintf(stderr, "Password may not contain space or tab character\n");
+                return;
+            }
+            std::string msg = msgLOGIN + " " + account + " " + password;
+            udpSendTo(fd, msg.c_str(), msg.length(), serverAddrp);
+            udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+            printf("%s\n", buffer);
+            if (std::string(buffer).find("\nLogin Success!\n\n") != std::string::npos) {
+                nowStage = NPStage::MAIN;
+            }
+        }
+    private:
+        static bool isValidAcPw(const std::string& str) {
+            for (char c : str) {
+                if (c == ' ' || c == '\t') {
+                    return false;
+                }
+            }
+            return true;
+        }
+};
 
 void clientFunc(const int& fd, sockaddr_in serverAddr);
+void printMessage(const NPStage& stage);
 
 int main(int argc, char const** argv) {
     // check argments
@@ -18,6 +92,7 @@ int main(int argc, char const** argv) {
         fprintf(stderr, "%s is not a valid port number\n", argv[2]);
         exit(EXIT_FAILURE);
     }
+    printf("Info: Type \"QUIT\" to quit.\n\n");
     // socket initialize
     int socketfd;
     sockaddr_in serverAddr;
@@ -37,6 +112,7 @@ int main(int argc, char const** argv) {
 }
 
 void clientFunc(const int& fd, sockaddr_in serverAddr) {
+    nowStage = NPStage::INIT;
     char buffer[MAXN];
     // fd_set initialize
     fd_set fdset;
@@ -44,9 +120,11 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
     FD_ZERO(&fdset);
     // server sockaddr*
     sockaddr* serverAddrp = reinterpret_cast<sockaddr*>(&serverAddr);
-    udpSendTo(fd, "NEW CONNECTION", 14, serverAddrp);
+    udpSendTo(fd, msgNEWCONNECTION.c_str(), msgNEWCONNECTION.length(), serverAddrp);
     udpRecvFrom(fd, buffer, MAXN, serverAddrp);
     printf("%s\n", buffer);
+    nowStage = NPStage::WELCOME;
+    printMessage(nowStage);
     // loop to select
     for ( ; ; ) {
         // set socket fd
@@ -68,8 +146,42 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 continue;
             }
             trimNewLine(buffer);
-            printf("user input %s\n", buffer);
+            std::string command = buffer;
+            if (command == "QUIT") {
+                return;
+            }
+            switch (static_cast<int>(nowStage)) {
+                case 0:
+                    fprintf(stderr, "Invalid Command\n");
+                    break;
+                case 1:
+                    if (command.find("L") == 0u) {
+                        ClientUtility::udpLogin(fd, serverAddrp);
+                    }
+                    else if (command.find("R") == 0u) {
+                        ClientUtility::udpRegister(fd, serverAddrp);
+                    }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
+                    break;
+            }
+            printMessage(nowStage);
         }
     }
+}
+
+void printMessage(const NPStage& stage) {
+    switch (static_cast<int>(stage)) {
+        case 0:
+            break;
+        case 1:
+            printf("%s~ ", msgOptWELCOME.c_str());
+            break;
+        case 2:
+            printf("%s~ ", msgOptMAIN.c_str());
+            break;
+    }
+    fflush(stdout);
 }
 
