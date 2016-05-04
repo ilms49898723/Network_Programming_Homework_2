@@ -19,5 +19,9 @@
 
 constexpr int MAXN = 2048;
 
+enum class NPStage {
+    INIT, WELCOME, MAIN, ARTICLE
+};
+
 #endif /* NETWORK_PROGRAMMING_GLOBAL_H_ */
 
