@@ -5,7 +5,15 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <string>
 #include "global.h"
+
+struct ConnectInfo {
+    std::string address;
+    int port;
+    ConnectInfo(const std::string& address = "", const int& port = 0) :
+        address(address), port(port) { }
+};
 
 void udpSendTo(const int& socketfd, const char* msg, const size_t n, sockaddr*& dstSocketp);
 
@@ -16,6 +24,8 @@ void setSocketTimeout(const int& socketfd, const int& second, const int& millise
 void trimNewLine(char* src);
 
 int stringHash(const char* src, size_t len);
+
+ConnectInfo getConnectInfo(const sockaddr_in& sock);
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_NPUTILITY_H
 

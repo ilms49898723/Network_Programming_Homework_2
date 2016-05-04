@@ -30,6 +30,7 @@ void udpSendTo(const int& socketfd, const char* msg, const size_t n, sockaddr*& 
 void udpRecvFrom(const int& socketfd, char* dst, const size_t n, sockaddr*& srcSocketp) {
     socklen_t srcLen = sizeof(*srcSocketp);
     int byteSend, byteRead;
+    memset(dst, 0, sizeof(char) * n);
     while ((byteRead = recvfrom(socketfd, dst, n, 0, srcSocketp, &srcLen)) < 0) {
         if (errno == EWOULDBLOCK || errno == EAGAIN) {
             continue;
@@ -37,6 +38,7 @@ void udpRecvFrom(const int& socketfd, char* dst, const size_t n, sockaddr*& srcS
         else {
             fprintf(stderr, "udpRecvFrom: recvfrom: %s\n", strerror(errno));
         }
+        memset(dst, 0, sizeof(char) * n);
     }
     while ((byteSend = sendto(socketfd, dst, byteRead, 0, srcSocketp, srcLen)) < 0) {
         fprintf(stderr, "udpRecvFrom: sendto: %s\n", strerror(errno));
@@ -65,6 +67,13 @@ int stringHash(const char* src, size_t len) {
         ret = ret * coef + src[i];
         coef *= 31;
     }
+    return ret;
+}
+
+ConnectInfo getConnectInfo(const sockaddr_in& sock) {
+    ConnectInfo ret;
+    ret.address = inet_ntoa(sock.sin_addr);
+    ret.port = ntohs(sock.sin_port);
     return ret;
 }
 
