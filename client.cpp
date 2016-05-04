@@ -15,7 +15,7 @@ int main(int argc, char const** argv) {
     // check port
     int port;
     if (sscanf(argv[2], "%d", &port) != 1) {
-        fprintf(stderr, "%s is not valid\n", argv[2]);
+        fprintf(stderr, "%s is not a valid port number\n", argv[2]);
         exit(EXIT_FAILURE);
     }
     // socket initialize
@@ -24,7 +24,10 @@ int main(int argc, char const** argv) {
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
-    inet_pton(AF_INET, argv[1], &serverAddr.sin_addr);
+    if (inet_pton(AF_INET, argv[1], &serverAddr.sin_addr) < 0) {
+        fprintf(stderr, "inet_pton: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
     socketfd = socket(AF_INET, SOCK_DGRAM, 0);
     // set socket timeout
     setSocketTimeout(socketfd, 0, 200);
@@ -34,12 +37,16 @@ int main(int argc, char const** argv) {
 }
 
 void clientFunc(const int& fd, sockaddr_in serverAddr) {
+    char buffer[MAXN];
     // fd_set initialize
     fd_set fdset;
     int maxfdp1 = fd + 1;
     FD_ZERO(&fdset);
     // server sockaddr*
     sockaddr* serverAddrp = reinterpret_cast<sockaddr*>(&serverAddr);
+    udpSendTo(fd, "NEW CONNECTION", 14, serverAddrp);
+    udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+    printf("%s\n", buffer);
     // loop to select
     for ( ; ; ) {
         // set socket fd
@@ -56,15 +63,12 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
         }
         if (FD_ISSET(fileno(stdin), &fdset)) {
             // TODO: complete it
-            char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             if (fgets(buffer, MAXN, stdin) == NULL) {
                 continue;
             }
             trimNewLine(buffer);
-            udpSendTo(fd, buffer, strlen(buffer), serverAddrp);
-            udpRecvFrom(fd, buffer, MAXN, serverAddrp);
-            printf("recv %s from server\n", buffer);
+            printf("user input %s\n", buffer);
         }
     }
 }

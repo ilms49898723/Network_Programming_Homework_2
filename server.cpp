@@ -15,7 +15,7 @@ int main(int argc, char const** argv) {
     // read port
     int port;
     if (sscanf(argv[1], "%d", &port) != 1) {
-        fprintf(stderr, "port %s is not valid\n", argv[1]);
+        fprintf(stderr, "port %s is not a valid port number\n", argv[1]);
         exit(EXIT_FAILURE);
     }
     // socket initialize
@@ -62,12 +62,11 @@ void serverFunc(const int& fd) {
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             udpRecvFrom(fd, buffer, MAXN, clientAddrp);
-            printf("recv %s from client\n", buffer);
-            memset(buffer, 0, sizeof(buffer));
-            strcpy(buffer, "WELCOME!!!");
-            printf("send %s to client\n", buffer);
-            udpSendTo(fd, buffer, strlen(buffer), clientAddrp);
-            printf("send complete!\n");
+            std::string msg = buffer;
+            if (msg == "NEW CONNECTION") {
+                snprintf(buffer, MAXN, "WELCOME!\n[L]Login  [R]Register");
+                udpSendTo(fd, buffer, strlen(buffer), clientAddrp);
+            }
         }
     }
 }
