@@ -23,7 +23,7 @@ class ClientUtility {
                 return;
             }
             trimNewLine(account);
-            if (!isValidAcPw(account)) {
+            if (!isValidString(account)) {
                 fprintf(stderr, "Account may not contain space or tab character\n");
                 return;
             }
@@ -32,7 +32,7 @@ class ClientUtility {
                 return;
             }
             trimNewLine(password);
-            if (!isValidAcPw(password)) {
+            if (!isValidString(password)) {
                 fprintf(stderr, "Password may not contain space or tab character\n");
                 return;
             }
@@ -50,7 +50,7 @@ class ClientUtility {
                 return;
             }
             trimNewLine(account);
-            if (!isValidAcPw(account)) {
+            if (!isValidString(account)) {
                 fprintf(stderr, "Account may not contain space or tab character\n");
                 return;
             }
@@ -59,7 +59,7 @@ class ClientUtility {
                 return;
             }
             trimNewLine(password);
-            if (!isValidAcPw(password)) {
+            if (!isValidString(password)) {
                 fprintf(stderr, "Password may not contain space or tab character\n");
                 return;
             }
@@ -86,12 +86,32 @@ class ClientUtility {
         static void udpShowProfile(const int& fd, sockaddr*& serverAddrp) {
             char buffer[MAXN];
             std::string msg = msgSHOWPROFILE + " " + nowAccount;
+            printf("nowAccount %s\n", nowAccount.c_str());
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            printf("%s\n", buffer);
+        }
+
+        static void udpSetProfile(const int& fd, sockaddr*& serverAddrp) {
+            char name[MAXN];
+            char birthday[MAXN];
+            printf("Name: ");
+            if (fgets(name, MAXN, stdin) == NULL || !isValidString(name)) {
+                return;
+            }
+            trimNewLine(name);
+            printf("Birthday: ");
+            if (fgets(birthday, MAXN, stdin) == NULL || !isValidString(birthday)) {
+                return;
+            }
+            trimNewLine(birthday);
+            char buffer[MAXN];
+            std::string msg = msgSETPROFILE + " " + nowAccount + " " + name + " " + birthday;
             udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
             printf("%s\n", buffer);
         }
 
     private:
-        static bool isValidAcPw(const std::string& str) {
+        static bool isValidString(const std::string& str) {
             for (char c : str) {
                 if (c == ' ' || c == '\t') {
                     return false;
@@ -122,7 +142,6 @@ int main(int argc, char const** argv) {
         exit(EXIT_FAILURE);
     }
     nowAccount = "";
-    printf("Info: Type \"QUIT\" to quit.\n\n");
     // socket initialize
     int socketfd;
     sockaddr_in serverAddr;
@@ -176,15 +195,15 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
             }
             trimNewLine(buffer);
             std::string command = buffer;
-            if (command == "QUIT") {
-                return;
-            }
             switch (static_cast<int>(nowStage)) {
                 case 0:
                     fprintf(stderr, "Invalid Command\n");
                     break;
                 case 1:
-                    if (command.find("L") == 0u) {
+                    if (command.find("Q") == 0u) {
+                        return;
+                    }
+                    else if (command.find("L") == 0u) {
                         ClientUtility::udpLogin(fd, serverAddrp);
                     }
                     else if (command.find("R") == 0u) {
@@ -200,6 +219,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     else if (command.find("SP") == 0u) {
                         ClientUtility::udpShowProfile(fd, serverAddrp);
+                    }
+                    else if (command.find("SE") == 0u) {
+                        ClientUtility::udpSetProfile(fd, serverAddrp);
                     }
                     break;
             }

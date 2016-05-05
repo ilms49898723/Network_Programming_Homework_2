@@ -90,7 +90,6 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s", account);
             snprintf(buffer, MAXN, "\nLogout Success!\n\n");
             serverData[account].isOnline = false;
-            serverData[account].lastLogin = time(NULL);
             printf("Account %s logout at %s", account, asctime(localtime(&serverData[account].lastLogin)));
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
@@ -105,6 +104,17 @@ class ServerUtility {
                                  std::string("Birthday: ") + serverData[account].birthday + "\n" +
                                  std::string("Register Date: ") + regDate +
                                  std::string("Last Login: ") + lastDate;
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
+        static void udpSetProfile(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            char name[MAXN];
+            char birthday[MAXN];
+            sscanf(msg.c_str(), "%*s%s%s%s", account, name, birthday);
+            serverData[account].name = name;
+            serverData[account].birthday = birthday;
+            std::string toSend = "Profile Setting Success!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 };
@@ -169,7 +179,7 @@ void serverFunc(const int& fd) {
                 continue;
             }
             trimNewLine(buffer);
-            if (std::string(buffer) == "QUIT") {
+            if (std::string(buffer) == "Q") {
                 return;
             }
         }
@@ -194,6 +204,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgSHOWPROFILE) == 0u) {
                 ServerUtility::udpShowProfile(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgSETPROFILE) == 0u) {
+                ServerUtility::udpSetProfile(fd, clientAddrp, msg);
             }
         }
     }
