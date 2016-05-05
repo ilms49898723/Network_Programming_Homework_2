@@ -15,6 +15,7 @@ UDPUtil udp;
 class UserData {
     public:
         UserData() {
+            isOnline = false;
             password = "";
             name = "";
             birthday = "";
@@ -28,6 +29,7 @@ class UserData {
         }
 
     public:
+        bool isOnline;
         std::string password;
         std::string name;
         std::string birthday;
@@ -59,6 +61,7 @@ class ServerUtility {
             }
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
+
         static void udpLogin(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             char password[MAXN];
@@ -72,11 +75,37 @@ class ServerUtility {
                 snprintf(buffer, MAXN, "\nLogin Success!\n\nWelcome %s\nLast Login %s\n",
                         serverData[account].name == "" ? account : serverData[account].name.c_str(),
                         asctime(localtime(&serverData[account].lastLogin)));
+                serverData[account].isOnline = true;
                 serverData[account].lastLogin = time(NULL);
                 printf("Account %s login at %s",
                         account, asctime(localtime(&serverData[account].lastLogin)));
             }
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
+        }
+
+        static void udpLogout(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            char buffer[MAXN];
+            memset(buffer, 0, sizeof(buffer));
+            sscanf(msg.c_str(), "%*s%s", account);
+            snprintf(buffer, MAXN, "\nLogout Success!\n\n");
+            serverData[account].isOnline = false;
+            serverData[account].lastLogin = time(NULL);
+            printf("Account %s logout at %s", account, asctime(localtime(&serverData[account].lastLogin)));
+            udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
+        }
+
+        static void udpShowProfile(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            std::string regDate = asctime(localtime(&serverData[account].registerDate));
+            std::string lastDate = asctime(localtime(&serverData[account].lastLogin));
+            std::string toSend = std::string("Account: ") + account + "\n" +
+                                 std::string("Name: ") + serverData[account].name + "\n" +
+                                 std::string("Birthday: ") + serverData[account].birthday + "\n" +
+                                 std::string("Register Date: ") + regDate +
+                                 std::string("Last Login: ") + lastDate;
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 };
 
@@ -159,6 +188,12 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgLOGIN) == 0u) {
                 ServerUtility::udpLogin(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgLOGOUT) == 0u) {
+                ServerUtility::udpLogout(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgSHOWPROFILE) == 0u) {
+                ServerUtility::udpShowProfile(fd, clientAddrp, msg);
             }
         }
     }

@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include "global.h"
 #include "nputility.h"
 #include "udpmessage.h"
@@ -8,6 +9,8 @@
 
 NPStage nowStage;
 UDPUtil udp;
+
+std::string nowAccount;
 
 class ClientUtility {
     public:
@@ -37,6 +40,7 @@ class ClientUtility {
             udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
             printf("%s\n", buffer);
         }
+
         static void udpLogin(const int& fd, sockaddr*& serverAddrp) {
             char account[MAXN];
             char password[MAXN];
@@ -64,8 +68,28 @@ class ClientUtility {
             printf("%s\n", buffer);
             if (std::string(buffer).find("\nLogin Success!\n\n") != std::string::npos) {
                 nowStage = NPStage::MAIN;
+                nowAccount = account;
             }
         }
+
+        static void udpLogout(const int& fd, sockaddr*& serverAddrp) {
+            char buffer[MAXN];
+            std::string msg = msgLOGOUT + " " + nowAccount;
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            printf("%s\n", buffer);
+            if (std::string(buffer).find("\nLogout Success!\n\n") != std::string::npos) {
+                nowStage = NPStage::WELCOME;
+                nowAccount = "";
+            }
+        }
+
+        static void udpShowProfile(const int& fd, sockaddr*& serverAddrp) {
+            char buffer[MAXN];
+            std::string msg = msgSHOWPROFILE + " " + nowAccount;
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            printf("%s\n", buffer);
+        }
+
     private:
         static bool isValidAcPw(const std::string& str) {
             for (char c : str) {
@@ -73,7 +97,12 @@ class ClientUtility {
                     return false;
                 }
             }
-            return true;
+            for (char c : str) {
+                if (c != '\n') {
+                    return true;
+                }
+            }
+            return false;
         }
 };
 
@@ -92,6 +121,7 @@ int main(int argc, char const** argv) {
         fprintf(stderr, "%s is not a valid port number\n", argv[2]);
         exit(EXIT_FAILURE);
     }
+    nowAccount = "";
     printf("Info: Type \"QUIT\" to quit.\n\n");
     // socket initialize
     int socketfd;
@@ -162,6 +192,14 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     else {
                         fprintf(stderr, "Invalid Command\n");
+                    }
+                    break;
+                case 2:
+                    if (command.find("L") == 0u) {
+                        ClientUtility::udpLogout(fd, serverAddrp);
+                    }
+                    else if (command.find("SP") == 0u) {
+                        ClientUtility::udpShowProfile(fd, serverAddrp);
                     }
                     break;
             }
