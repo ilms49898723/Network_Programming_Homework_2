@@ -4,8 +4,10 @@
 #include "global.h"
 #include "nputility.h"
 #include "udpmessage.h"
+#include "UDPUtil.h"
 
 NPStage nowStage;
+UDPUtil udp;
 
 class ClientUtility {
     public:
@@ -32,8 +34,7 @@ class ClientUtility {
                 return;
             }
             std::string msg = msgREGISTER + " " + account + " " + password;
-            udpSendTo(fd, msg.c_str(), msg.length(), serverAddrp);
-            udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
             printf("%s\n", buffer);
         }
         static void udpLogin(const int& fd, sockaddr*& serverAddrp) {
@@ -59,8 +60,7 @@ class ClientUtility {
                 return;
             }
             std::string msg = msgLOGIN + " " + account + " " + password;
-            udpSendTo(fd, msg.c_str(), msg.length(), serverAddrp);
-            udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
             printf("%s\n", buffer);
             if (std::string(buffer).find("\nLogin Success!\n\n") != std::string::npos) {
                 nowStage = NPStage::MAIN;
@@ -120,8 +120,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
     FD_ZERO(&fdset);
     // server sockaddr*
     sockaddr* serverAddrp = reinterpret_cast<sockaddr*>(&serverAddr);
-    udpSendTo(fd, msgNEWCONNECTION.c_str(), msgNEWCONNECTION.length(), serverAddrp);
-    udpRecvFrom(fd, buffer, MAXN, serverAddrp);
+    udp.udpTrans(fd, serverAddrp, buffer, MAXN, msgNEWCONNECTION.c_str(), msgNEWCONNECTION.length());
     printf("%s\n", buffer);
     nowStage = NPStage::WELCOME;
     printMessage(nowStage);

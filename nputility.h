@@ -15,10 +15,6 @@ struct ConnectInfo {
         address(address), port(port) { }
 };
 
-void udpSendTo(const int& socketfd, const char* msg, const size_t n, sockaddr*& dstSocketp);
-
-void udpRecvFrom(const int& socketfd, char* dst, const size_t n, sockaddr*& srcSocketp);
-
 void setSocketTimeout(const int& socketfd, const int& second, const int& millisecond);
 
 void trimNewLine(char* src);

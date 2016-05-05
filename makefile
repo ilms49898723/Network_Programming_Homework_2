@@ -4,9 +4,10 @@ CXXFLAGS := -std=c++11 -I. -L. -Os -Wall -Wextra
 
 OBJS := client.o \
 		server.o \
-		nputility.o
+		nputility.o \
+		UDPUtil.o
 
-DEP := nputility.o
+DEP := nputility.o UDPUtil.o
 
 .SUFFIXS:
 .SUFFIXS: .cpp .o

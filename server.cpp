@@ -7,6 +7,9 @@
 #include "global.h"
 #include "nputility.h"
 #include "udpmessage.h"
+#include "UDPUtil.h"
+
+UDPUtil udp;
 
 // store user data like password, name, birthday, etc.
 class UserData {
@@ -54,7 +57,7 @@ class ServerUtility {
                 snprintf(buffer, MAXN, "Register Success\n");
                 printf("New Account %s added\n", account);
             }
-            udpSendTo(fd, buffer, strlen(buffer), clientAddrp);
+            udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
         static void udpLogin(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
@@ -73,7 +76,7 @@ class ServerUtility {
                 printf("Account %s login at %s",
                         account, asctime(localtime(&serverData[account].lastLogin)));
             }
-            udpSendTo(fd, buffer, strlen(buffer), clientAddrp);
+            udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
 };
 
@@ -145,11 +148,11 @@ void serverFunc(const int& fd) {
             // TODO: complete it
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
-            udpRecvFrom(fd, buffer, MAXN, clientAddrp);
+            udp.udpRecv(fd, clientAddrp, buffer, MAXN);
             std::string msg = buffer;
             if (msg == msgNEWCONNECTION) {
                 snprintf(buffer, MAXN, "WELCOME!\n");
-                udpSendTo(fd, buffer, strlen(buffer), clientAddrp);
+                udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
             }
             else if (msg.find(msgREGISTER) == 0u) {
                 ServerUtility::udpRegister(fd, clientAddrp, msg);
