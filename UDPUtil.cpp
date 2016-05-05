@@ -86,7 +86,7 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
     }
 }
 
-int UDPUtil::udpSend(int fd, sockaddr*& sockp, char* src, size_t n) {
+int UDPUtil::udpSend(int fd, sockaddr*& sockp, const char* src, size_t n) {
     socklen_t sockLen = sizeof(*sockp);
     char temp[PMAXN];
     memset(temp, 0, sizeof(temp));

@@ -38,7 +38,7 @@ class UDPUtil {
 
         int udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char* src, size_t sn);
 
-        int udpSend(int fd, sockaddr*& sockp, char* src, size_t n);
+        int udpSend(int fd, sockaddr*& sockp, const char* src, size_t n);
 
         int udpRecv(int fd, sockaddr*& sockp, char* dst, size_t n);
 
