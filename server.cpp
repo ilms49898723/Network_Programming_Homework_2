@@ -2,14 +2,19 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <sstream>
+#include <string>
 #include <map>
 #include <vector>
+#include <utility>
 #include "global.h"
 #include "nputility.h"
 #include "udpmessage.h"
 #include "UDPUtil.h"
 
 UDPUtil udp;
+std::string lastIP;
+std::string lastPort;
 
 // store user data like password, name, birthday, etc.
 class UserData {
@@ -38,8 +43,72 @@ class UserData {
         time_t lastLogin;
 };
 
+// store article
+class ArticleData {
+    public:
+        ArticleData() {
+            timeStamp = time(NULL);
+        }
+
+        virtual ~ArticleData() {
+
+        }
+
+    public:
+        // time
+        time_t timeStamp;
+        // article content
+        std::string content;
+        // author
+        std::string author;
+        // source ip, port -> string
+        std::string source;
+        // who says like
+        std::vector<std::string> liker;
+        // comment
+        std::vector<std::string> comment;
+        // viewers setting
+        NPArticlePermission permission;
+        // viewer list(only when permission == SPEC
+        std::vector<std::string> viewer;
+};
+
+class Articles {
+    public:
+        Articles() {
+            index = 0;
+        }
+
+        virtual ~Articles() {
+
+        }
+
+        void incIndex() {
+            index++;
+        }
+
+        int getIndex() const {
+            return index;
+        }
+
+        void newArticle(int index) {
+            articles.insert(std::make_pair(index, ArticleData()));
+        }
+
+        ArticleData& getArticle(int index) {
+            return articles[index];
+        }
+
+    private:
+        int index;
+        // map for article index --> article content
+        std::map<int, ArticleData> articles;
+};
+
 // map for Account --> UserData
 std::map<std::string, UserData> serverData;
+// articles
+Articles articles;
 
 class ServerUtility {
     public:
@@ -117,6 +186,49 @@ class ServerUtility {
             std::string toSend = "Profile Setting Success!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
+
+        static void udpAddArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: ADDARTICLE 0 account viewerType [viewers]
+            // server return article index
+            // format: ADDARTICLE 1 index content
+            // server return SUCCESS MSG
+            char account[MAXN];
+            int config;
+            sscanf(msg.c_str(), "%*s%d", &config);
+            if (config == 0) {
+                int index = articles.getIndex();
+                articles.incIndex();
+                articles.newArticle(index);
+                articles.getArticle(index).author = account;
+                articles.getArticle(index).timeStamp = time(NULL);
+                articles.getArticle(index).source = lastIP + ":" + lastPort;
+                int viewType;
+                std::istringstream iss(msg.c_str() + 12);
+                iss >> account >> viewType;
+                if (viewType == 0) {
+                    articles.getArticle(index).permission = NPArticlePermission::PUBLIC;
+                }
+                else if (viewType == 1) {
+                    articles.getArticle(index).permission = NPArticlePermission::AUTHOR;
+                }
+                else if (viewType == 2) {
+                    articles.getArticle(index).permission = NPArticlePermission::FRIENDS;
+                }
+                else if (viewType == 3) {
+                    articles.getArticle(index).permission = NPArticlePermission::SPEC;
+                    std::string viewer;
+                    while (iss >> viewer) {
+                        articles.getArticle(index).viewer.push_back(viewer);
+                    }
+                }
+                char buffer[MAXN];
+                snprintf(buffer, MAXN, "%d", index);
+                udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
+            }
+            else if (config == 1) {
+                
+            }
+        }
 };
 
 void serverFunc(const int& fd);
@@ -188,6 +300,8 @@ void serverFunc(const int& fd) {
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             udp.udpRecv(fd, clientAddrp, buffer, MAXN);
+            lastIP = inet_ntoa(clientAddr.sin_addr);
+            lastPort = std::to_string(static_cast<int>(ntohs(clientAddr.sin_port)));
             std::string msg = buffer;
             if (msg == msgNEWCONNECTION) {
                 snprintf(buffer, MAXN, "WELCOME!\n");

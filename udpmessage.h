@@ -15,8 +15,8 @@ const std::string msgLOGIN = "LOGIN";
 const std::string msgLOGOUT = "LOGOUT";
 const std::string msgSHOWPROFILE = "SHOWPROFILE";
 const std::string msgSETPROFILE = "SETPROFILE";
-const std::string msgSHOWARTICLE = "SHOWARTICLE";
 const std::string msgADDARTICLE = "ADDARTICLE";
+const std::string msgSHOWARTICLE = "SHOWARTICLE";
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_UDPMESSAGE_H_
 

@@ -23,5 +23,9 @@ enum class NPStage {
     INIT, WELCOME, MAIN, ARTICLE
 };
 
+enum class NPArticlePermission {
+    PUBLIC, AUTHOR, FRIENDS, SPEC
+};
+
 #endif /* NETWORK_PROGRAMMING_GLOBAL_H_ */
 
