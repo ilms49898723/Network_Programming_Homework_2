@@ -80,6 +80,7 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
                 unpack(toRecv);
                 memset(dst, 0, sizeof(char) * dn);
                 memcpy(dst, toRecv, dn);
+                dst[byteRecv - 20] = '\0';
                 return byteRecv - 20;
             }
         }
@@ -111,6 +112,7 @@ int UDPUtil::udpRecv(int fd, sockaddr*& sockp, char* dst, size_t n) {
     lastSeq = getSeq(temp);
     unpack(temp);
     memcpy(dst, temp, n);
+    dst[byteRecv - 20] = '\0';
     return byteRecv - 20;
 }
 
