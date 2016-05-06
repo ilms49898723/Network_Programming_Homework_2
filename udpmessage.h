@@ -4,7 +4,7 @@
 #include <string>
 
 const std::string msgOptWELCOME = "[L]Login  [R]Register  [Q]Quit\n";
-const std::string msgOptARTICLE = "[R]Response  [L]Like  [R]Return";
+const std::string msgOptARTICLE = "[R]Response  [L]Like  [Q]Quit\n";
 const std::string msgOptMAIN = std::string("[SP]Show Profile [SE]Set Profile\n") +
                                std::string("[SA]Show Article [A]Add Article [E]Enter Article\n") +
                                std::string("[C]Chat [S]Search User\n") +
@@ -20,6 +20,7 @@ const std::string msgSETPROFILE = "SETPROFILE";
 const std::string msgADDARTICLE = "ADDARTICLE";
 const std::string msgSHOWARTICLE = "SHOWARTICLE";
 const std::string msgENTERARTICLE = "ENTERARTICLE";
+const std::string msgLIKEARTICLE = "LIKEARTICLE";
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_UDPMESSAGE_H_
 

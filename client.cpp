@@ -11,6 +11,7 @@ NPStage nowStage;
 UDPUtil udp;
 
 std::string nowAccount;
+int nowArticleIndex;
 
 class ClientUtility {
     public:
@@ -207,6 +208,20 @@ class ClientUtility {
             std::string msg = msgENTERARTICLE + " " + std::to_string(index);
             udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
             printf("%s\n", buffer);
+            nowArticleIndex = index;
+            nowStage = NPStage::ARTICLE;
+        }
+
+        static void udpLikeArticle(const int& fd, sockaddr*& serverAddrp) {
+            std::string msg = msgLIKEARTICLE + " " + std::to_string(nowArticleIndex) + " " + nowAccount;
+            char buffer[MAXN];
+            printf("HERE1\n");
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            printf("HERE2\n");
+            printf("%s\n", buffer);
+            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            printf("%s\n", buffer);
         }
 
     private:
@@ -295,10 +310,10 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
             trimNewLine(buffer);
             std::string command = buffer;
             switch (static_cast<int>(nowStage)) {
-                case 0:
+                case 0: // init
                     fprintf(stderr, "Invalid Command\n");
                     break;
-                case 1:
+                case 1: // welcome
                     if (command.find("Q") == 0u) {
                         return;
                     }
@@ -312,7 +327,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         fprintf(stderr, "Invalid Command\n");
                     }
                     break;
-                case 2:
+                case 2: // main
                     if (command.find("L") == 0u) {
                         ClientUtility::udpLogout(fd, serverAddrp);
                     }
@@ -332,6 +347,16 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpEnterArticle(fd, serverAddrp);
                     }
                     break;
+                case 3: // article
+                    if (command.find("Q") == 0u) {
+                        nowArticleIndex = -1;
+                        nowStage =NPStage::MAIN;
+                    }
+                    else if (command.find("L") == 0u) {
+                        ClientUtility::udpLikeArticle(fd, serverAddrp);
+                    }
+                    else if (command.find("R") == 0u) {
+                    }
             }
             printMessage(nowStage);
         }
@@ -340,13 +365,16 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
 
 void printMessage(const NPStage& stage) {
     switch (static_cast<int>(stage)) {
-        case 0:
+        case 0: // init
             break;
-        case 1:
+        case 1: // welcome
             printf("%s~ ", msgOptWELCOME.c_str());
             break;
-        case 2:
+        case 2: // main
             printf("%s~ ", msgOptMAIN.c_str());
+            break;
+        case 3: // article
+            printf("%s~ ", msgOptARTICLE.c_str());
             break;
     }
     fflush(stdout);

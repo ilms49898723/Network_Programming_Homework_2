@@ -255,7 +255,6 @@ class ServerUtility {
                 else {
                     title = "";
                 }
-                printf("title = %s\n", title.c_str());
                 articles.getArticle(index).title = title;
                 char buffer[MAXN];
                 snprintf(buffer, MAXN, "%d", index);
@@ -293,6 +292,35 @@ class ServerUtility {
             toSend += " From: " + articles.getArticle(index).source + "\n";
             toSend += "   At: " + timeString + "\n";
             toSend += articles.getArticle(index).content + "\n";
+            toSend += "Like:\n";
+            for (const auto& who : articles.getArticle(index).liker) {
+                toSend += who + " ";
+            }
+            toSend += "\n";
+            toSend += "Comment:\n";
+            for (const auto& comment : articles.getArticle(index).comment) {
+                toSend += comment + "\n";
+            }
+            toSend += "\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
+        static void udpLikeArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: LIKEARTICLE index account
+            char account[MAXN];
+            int index;
+            sscanf(msg.c_str(), "%*s%d%s", &index, account);
+            bool notInLiker = true;
+            for (const auto& who : articles.getArticle(index).liker) {
+                if (who == account) {
+                    notInLiker = false;
+                    break;
+                }
+            }
+            if (notInLiker) {
+                articles.getArticle(index).liker.push_back(account);
+            }
+            std::string toSend = "Like Successfully!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 };
@@ -399,6 +427,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgENTERARTICLE) == 0u) {
                 ServerUtility::udpEnterArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgLIKEARTICLE) == 0u) {
+                ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
             }
         }
     }
