@@ -17,6 +17,7 @@ const std::string msgSHOWPROFILE = "SHOWPROFILE";
 const std::string msgSETPROFILE = "SETPROFILE";
 const std::string msgADDARTICLE = "ADDARTICLE";
 const std::string msgSHOWARTICLE = "SHOWARTICLE";
+const std::string msgENTERARTICLE = "ENTERARTICLE";
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_UDPMESSAGE_H_
 
