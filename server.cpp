@@ -210,15 +210,15 @@ class ServerUtility {
             int config;
             sscanf(msg.c_str(), "%*s%d", &config);
             if (config == 0) {
+                std::istringstream iss(msg.c_str() + 12);
+                int viewType;
+                iss >> account >> viewType;
                 int index = articles.getIndex();
                 articles.incIndex();
                 articles.newArticle(index);
                 articles.getArticle(index).author = account;
                 articles.getArticle(index).timeStamp = time(NULL);
                 articles.getArticle(index).source = lastIP + ":" + lastPort;
-                int viewType;
-                std::istringstream iss(msg.c_str() + 12);
-                iss >> account >> viewType;
                 if (viewType == 0) {
                     articles.getArticle(index).permission = NPArticlePermission::PUBLIC;
                 }
