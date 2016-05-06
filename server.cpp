@@ -400,6 +400,7 @@ void serverFunc(const int& fd) {
             lastIP = inet_ntoa(clientAddr.sin_addr);
             lastPort = std::to_string(static_cast<int>(ntohs(clientAddr.sin_port)));
             std::string msg = buffer;
+            printf("get %s\n", msg.c_str());
             if (msg == msgNEWCONNECTION) {
                 snprintf(buffer, MAXN, "WELCOME!\n");
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
@@ -428,9 +429,9 @@ void serverFunc(const int& fd) {
             else if (msg.find(msgENTERARTICLE) == 0u) {
                 ServerUtility::udpEnterArticle(fd, clientAddrp, msg);
             }
-            else if (msg.find(msgLIKEARTICLE) == 0u) {
-                ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
-            }
+            //else if (msg.find(msgLIKEARTICLE) == 0u) {
+            //    ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
+            //}
         }
     }
 }

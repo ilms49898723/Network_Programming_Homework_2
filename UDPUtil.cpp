@@ -1,6 +1,5 @@
 #include "UDPUtil.h"
 
-
 UDPSeqCounter::UDPSeqCounter() {
     init();
 }
@@ -49,16 +48,17 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
     counter = 0;
     while ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) < 0) {
         counter++;
-        if (counter > 5) {
+        if (counter > 10) {
+            fprintf(stderr, "UDPUtil: sendto: %s\n",strerror(errno));
             return -1;
         }
-        fprintf(stderr, "UDPUtil: sendto: %s\n",strerror(errno));
     }
     int byteRecv;
     counter = 0;
     while (true) {
         memset(toRecv, 0, sizeof(toRecv));
         byteRecv = recvfrom(fd, toRecv, PMAXN, 0, sockp, &sockLen);
+        ++counter;
         if (byteRecv < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 if ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) < 0) {
@@ -83,6 +83,11 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
                 dst[byteRecv - 20] = '\0';
                 return byteRecv - 20;
             }
+        }
+        if (counter >= 10) {
+            fprintf(stderr, "Timeout! Can\'t connect to server or server is too busy\n");
+            fprintf(stderr, "Please try again later\n");
+            return -1;
         }
     }
 }
