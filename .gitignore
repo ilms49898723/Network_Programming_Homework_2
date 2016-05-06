@@ -30,3 +30,7 @@
 # project output files
 client
 server
+
+# executable generate files
+Upload/
+Download/
