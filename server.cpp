@@ -38,7 +38,7 @@ class UserData {
         std::string password;
         std::string name;
         std::string birthday;
-        std::vector<std::string> friends;
+        std::map<std::string, bool> friends;
         time_t registerDate;
         time_t lastLogin;
 };
@@ -66,7 +66,7 @@ class ArticleData {
         // source ip, port -> string
         std::string source;
         // who says like
-        std::vector<std::string> liker;
+        std::map<std::string, bool> liker;
         // comment
         std::vector<std::string> comment;
         // viewer setting
@@ -397,7 +397,7 @@ class ServerUtility {
             toSend += articles.getArticle(index).content + "\n";
             toSend += "Like:\n";
             for (const auto& who : articles.getArticle(index).liker) {
-                toSend += who + " ";
+                toSend += who.first + " ";
             }
             toSend += "\n";
             toSend += "Comment:\n";
@@ -409,26 +409,35 @@ class ServerUtility {
         }
 
         static void udpLikeArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
-            // format: LIKEARTICLE index account
+            // format: LIKEARTICLE account index
             char account[MAXN];
             int index;
-            sscanf(msg.c_str(), "%*s%d%s", &index, account);
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
             if (articles.getAllArticles().count(index) < 1) {
                 std::string toS = msgARTICLENOTFOUND;
                 udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
                 return;
             }
-            bool notInLiker = true;
-            for (const auto& who : articles.getArticle(index).liker) {
-                if (who == account) {
-                    notInLiker = false;
-                    break;
-                }
-            }
+            bool notInLiker = (articles.getArticle(index).liker.count(account) < 1);
             if (notInLiker) {
-                articles.getArticle(index).liker.push_back(account);
+                articles.getArticle(index).liker.insert(std::make_pair(account, true));
             }
             std::string toSend = "Like Successfully!\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
+        static void udpUnlikeArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: UNLIKEARTICLE account index
+            char account[MAXN];
+            int index;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            if (articles.getAllArticles().count(index) < 1) {
+                std::string toS = msgARTICLENOTFOUND;
+                udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            articles.getArticle(index).liker.erase(account);
+            std::string toSend = "Unlike Successfully\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
@@ -462,7 +471,7 @@ class ServerUtility {
                     return false;
                 }
                 for (const auto& who : serverData[article.author].friends) {
-                    if (account == who) {
+                    if (account == who.first) {
                         return true;
                     }
                 }
@@ -588,6 +597,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgLIKEARTICLE) == 0u) {
                 ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgUNLIKEARTICLE) == 0u) {
+                ServerUtility::udpUnlikeArticle(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);

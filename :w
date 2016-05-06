@@ -319,7 +319,7 @@ class ClientUtility {
             if (std::string(buffer) == msgPERMISSIONDENIED) {
                 return;
             }
-            nowArticleIndex = -1;
+            nowArticleIndex = 0;
             nowStage = NPStage::MAIN;
         }
 
@@ -364,7 +364,7 @@ class ClientUtility {
             }
             printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
-                nowArticleIndex = -1;
+                nowArticleIndex = 0;
                 nowStage = NPStage::MAIN;
                 return;
             }
@@ -383,7 +383,7 @@ class ClientUtility {
             }
             printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
-                nowArticleIndex = -1;
+                nowArticleIndex = 0;
                 nowStage = NPStage::MAIN;
                 return;
             }
