@@ -69,7 +69,7 @@ class ArticleData {
         std::vector<std::string> liker;
         // comment
         std::vector<std::string> comment;
-        // viewers setting
+        // viewer setting
         NPArticlePermission permission;
         // viewer list(only when permission == SPEC
         std::map<std::string, bool> viewer;
@@ -204,7 +204,7 @@ class ServerUtility {
         }
 
         static void udpAddArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
-            // format: ADDARTICLE 0 account viewerType [viewers]
+            // format: ADDARTICLE 0 account viewerType [viewer]
             // server return a new article index
             // format: ADDARTICLE 1 index title
             // server return article index
@@ -245,13 +245,11 @@ class ServerUtility {
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
             }
             else if (config == 1) {
-                char indexString[MAXN];
                 int index;
                 unsigned pos;
                 sscanf(msg.c_str() + 12, "%d", &index);
-                snprintf(indexString, MAXN, "%d", index);
-                pos = msg.find(indexString, 12);
-                pos += (strlen(indexString) + 1);
+                pos = msg.find(std::to_string(index), 12);
+                pos += (std::to_string(index).length() + 1);
                 std::string title;
                 if (pos < msg.length()) {
                     title = msg.substr(pos);
@@ -265,13 +263,11 @@ class ServerUtility {
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
             }
             else if (config == 2) {
-                char indexString[MAXN];
                 int index;
                 unsigned pos;
                 sscanf(msg.c_str() + 12, "%d", &index);
-                snprintf(indexString, MAXN, "%d", index);
-                pos = msg.find(indexString, 12);
-                pos += (strlen(indexString) + 1);
+                pos = msg.find(std::to_string(index), 12);
+                pos += (std::to_string(index).length() + 1);
                 std::string content;
                 if (pos < msg.length()) {
                     content = msg.substr(pos);
@@ -283,6 +279,51 @@ class ServerUtility {
                 std::string toSend = "Article Added Successfully!\n";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
             }
+        }
+
+        static void udpEditArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: EDITARTICLE 0 index viewType [viewer]
+            // server return result
+            // format: EDITARTICLE 1 index title
+            // server return result
+            // format: EDITARTICLE 2 index content
+            // server return result
+            int config, index, offset;
+            sscanf(msg.c_str(), "%*s%d%d", &config, &index);
+            offset = 14;
+            offset += (std::to_string(index).length() + 1);
+            if (config == 0) {
+                std::istringstream iss(msg.c_str() + offset);
+                int viewType;
+                iss >> viewType;
+                articles.getArticle(index).viewer.clear();
+                if (viewType == 1) {
+                    articles.getArticle(index).permission = NPArticlePermission::PUBLIC;
+                }
+                else if (viewType == 2) {
+                    articles.getArticle(index).permission = NPArticlePermission::AUTHOR;
+                }
+                else if (viewType == 3) {
+                    articles.getArticle(index).permission = NPArticlePermission::FRIENDS;
+                }
+                else {
+                    std::string account;
+                    articles.getArticle(index).permission = NPArticlePermission::SPEC;
+                    while (iss >> account) {
+                        articles.getArticle(index).viewer.insert(std::make_pair(account, true));
+                    }
+                }
+            }
+            else if (config == 1) {
+                std::string title = msg.substr(offset);
+                articles.getArticle(index).title = title;
+            }
+            else if (config == 2) {
+                std::string content = msg.substr(offset);
+                articles.getArticle(index).content = content;
+            }
+            std::string toSend = "Edit Success!\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
         static void udpShowArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
@@ -364,6 +405,24 @@ class ServerUtility {
             std::string toSend = "Like Successfully!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
+
+        static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            int index;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            std::string toSend;
+            if (index < 0 || index >= articles.getIndex()) {
+                toSend = "Permission Denied!\n";
+            }
+            else if (articles.getArticle(index).author != account) {
+                toSend = "Permission Denied!\n";
+            }
+            else {
+                toSend = "ALL OK!\n";
+            }
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
     private:
         static bool canViewArticle(const std::string& account, const ArticleData& article) {
             if (article.permission == NPArticlePermission::PUBLIC) {
@@ -492,11 +551,17 @@ void serverFunc(const int& fd) {
             else if (msg.find(msgADDARTICLE) == 0u) {
                 ServerUtility::udpAddArticle(fd, clientAddrp, msg);
             }
+            else if (msg.find(msgEDITARTICLE) == 0u) {
+                ServerUtility::udpEditArticle(fd, clientAddrp, msg);
+            }
             else if (msg.find(msgENTERARTICLE) == 0u) {
                 ServerUtility::udpEnterArticle(fd, clientAddrp, msg);
             }
             else if (msg.find(msgLIKEARTICLE) == 0u) {
                 ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
+                ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);
             }
         }
     }

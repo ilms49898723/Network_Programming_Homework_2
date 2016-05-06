@@ -145,7 +145,9 @@ class ClientUtility {
         static void udpShowArticle(const int& fd, sockaddr*& serverAddrp) {
             std::string msg = msgSHOWARTICLE + " " + nowAccount;
             char buffer[MAXN];
-            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
             printf("\n%s\n", buffer);
         }
 
@@ -212,6 +214,110 @@ class ClientUtility {
             while (fgets(content, MAXN, stdin) != NULL) {
                 msg = msg + content;
             }
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
+        static void udpEditArticle(const int& fd, sockaddr*& serverAddrp) {
+            // format: EDITARTICLE 0 index viewType [viewers]
+            // server return result
+            // format: EDITARTICLE 1 index title
+            // server return result
+            // format: EDITARTICLE 2 index content
+            // server return result
+            std::string msg;
+            char buffer[MAXN];
+            int index = nowArticleIndex;
+            msg = msgCHECKARTICLEPERMISSION + " " + nowAccount + " " + std::to_string(index);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            if (std::string(buffer) == "Permission Denied!\n") {
+                printf("\n%s\n", buffer);
+                return;
+            }
+            while (true) {
+                char command[MAXN];
+                printf("%s~ ", msgOptEDITARTICLE.c_str());
+                if (fgets(command, MAXN, stdin) == NULL) {
+                    break;
+                }
+                trimNewLine(command);
+                if (std::string(command) == "P") {
+                    printf("Set permission(1:public, 2:author, 3:friend, 4:specific): ");
+                    msg = msgEDITARTICLE + " 0 " + std::to_string(index);
+                    while (true) {
+                        if (fgets(buffer, MAXN, stdin) == NULL) {
+                            return;
+                        }
+                        trimNewLine(buffer);
+                        if (std::string(buffer) == "1") {
+                            msg = msg + " " + buffer;
+                            break;
+                        }
+                        else if (std::string(buffer) == "2") {
+                            msg = msg + " " + buffer;
+                            break;
+                        }
+                        else if (std::string(buffer) == "3") {
+                            msg = msg + " " + buffer;
+                            break;
+                        }
+                        else if (std::string(buffer) == "4") {
+                            msg = msg + " " + buffer;
+                            printf("Please enter account(one per line) who can view this article\n");
+                            printf("Press ^D to finish\n");
+                            char viewAccount[MAXN];
+                            while (fgets(viewAccount, MAXN, stdin) != NULL) {
+                                msg = msg + " " + viewAccount;
+                            }
+                            break;
+                        }
+                        else {
+                            printf("Please enter number between 1 to 4: ");
+                        }
+                    }
+                    if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                        return;
+                    }
+                    printf("\n%s\n", buffer);
+                }
+                else if (std::string(command) == "T") {
+                    msg = msgEDITARTICLE + " 1 " + std::to_string(index);
+                    char title[MAXN];
+                    printf("Title: ");
+                    if (fgets(title, MAXN, stdin) == NULL) {
+                        return;
+                    }
+                    trimNewLine(title);
+                    msg = msg + " " + title;
+                    if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                        return;
+                    }
+                    printf("\n%s\n", buffer);
+                }
+                else if (std::string(command) == "C") {
+                    msg = msgEDITARTICLE + " 2 " + std::to_string(index) + " ";
+                    char content[MAXN];
+                    printf("Content(Press ^D to finish):\n");
+                    while (fgets(content, MAXN, stdin) != NULL) {
+                        msg += content;
+                    }
+                    if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                        return;
+                    }
+                    printf("\n%s\n", buffer);
+                }
+                else if (std::string(command) == "Q") {
+                    break;
+                }
+                else {
+                    printf("Command not found!\n");
+                }
+            }
+            msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(index);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
@@ -389,10 +495,16 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         nowArticleIndex = -1;
                         nowStage =NPStage::MAIN;
                     }
+                    else if (command.find("R") == 0u) {
+                    }
                     else if (command.find("L") == 0u) {
                         ClientUtility::udpLikeArticle(fd, serverAddrp);
                     }
-                    else if (command.find("R") == 0u) {
+                    else if (command.find("E") == 0u) {
+                        ClientUtility::udpEditArticle(fd, serverAddrp);
+                    }
+                    else if (command.find("D") == 0u) {
+
                     }
             }
             printMessage(nowStage);
