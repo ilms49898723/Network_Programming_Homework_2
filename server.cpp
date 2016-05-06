@@ -57,6 +57,8 @@ class ArticleData {
     public:
         // time
         time_t timeStamp;
+        // title
+        std::string title;
         // article content
         std::string content;
         // author
@@ -125,6 +127,8 @@ class ServerUtility {
                 serverData[account].password = password;
                 serverData[account].registerDate = time(NULL);
                 serverData[account].lastLogin = time(NULL);
+                serverData[account].name = account;
+                serverData[account].birthday = "???";
                 snprintf(buffer, MAXN, "Register Success\n");
                 printf("New Account %s added\n", account);
             }
@@ -189,8 +193,10 @@ class ServerUtility {
 
         static void udpAddArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             // format: ADDARTICLE 0 account viewerType [viewers]
+            // server return a new article index
+            // format: ADDARTICLE 1 index title
             // server return article index
-            // format: ADDARTICLE 1 index content
+            // format: ADDARTICLE 2 index content
             // server return SUCCESS MSG
             char account[MAXN];
             int config;
@@ -226,8 +232,59 @@ class ServerUtility {
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
             }
             else if (config == 1) {
-                
+                char indexString[MAXN];
+                int index;
+                unsigned pos;
+                sscanf(msg.c_str() + 12, "%d", &index);
+                snprintf(indexString, MAXN, "%d", index);
+                pos = msg.find(indexString, 12);
+                pos += (strlen(indexString) + 1);
+                std::string title;
+                if (pos < msg.length()) {
+                    title = msg.substr(pos);
+                }
+                else {
+                    title = "";
+                }
+                printf("title = %s\n", title.c_str());
+                articles.getArticle(index).title = title;
+                char buffer[MAXN];
+                snprintf(buffer, MAXN, "%d", index);
+                udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
             }
+            else if (config == 2) {
+                char indexString[MAXN];
+                int index;
+                unsigned pos;
+                sscanf(msg.c_str() + 12, "%d", &index);
+                snprintf(indexString, MAXN, "%d", index);
+                pos = msg.find(indexString, 12);
+                pos += (strlen(indexString) + 1);
+                std::string content;
+                if (pos < msg.length()) {
+                    content = msg.substr(pos);
+                }
+                else {
+                    content = "";
+                }
+                articles.getArticle(index).content = content;
+                std::string toSend = "Article Added Successfully!\n";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+            }
+        }
+
+        static void udpEnterArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: ENTERARTICLE index
+            int index;
+            sscanf(msg.c_str(), "%*s%d", &index);
+            std::string timeString = asctime(localtime(&articles.getArticle(index).timeStamp));
+            std::string toSend = "\n";
+            toSend += "Title: " + articles.getArticle(index).title + "\n";
+            toSend += "   By: " + articles.getArticle(index).author + "\n";
+            toSend += " From: " + articles.getArticle(index).source + "\n";
+            toSend += "   At: " + timeString + "\n";
+            toSend += articles.getArticle(index).content + "\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 };
 
@@ -291,7 +348,10 @@ void serverFunc(const int& fd) {
                 continue;
             }
             trimNewLine(buffer);
-            if (std::string(buffer) == "Q") {
+            if (std::string(buffer) == "Q" ||
+                std::string(buffer) == "q" ||
+                std::string(buffer) == "QUIT" ||
+                std::string(buffer) == "quit") {
                 return;
             }
         }
@@ -321,6 +381,12 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgSETPROFILE) == 0u) {
                 ServerUtility::udpSetProfile(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgADDARTICLE) == 0u) {
+                ServerUtility::udpAddArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgENTERARTICLE) == 0u) {
+                ServerUtility::udpEnterArticle(fd, clientAddrp, msg);
             }
         }
     }
