@@ -21,6 +21,8 @@ void trimNewLine(char* src);
 
 int stringHash(const char* src, size_t len);
 
+unsigned long long fileHash(const std::string& filename);
+
 ConnectInfo getConnectInfo(const sockaddr_in& sock);
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_NPUTILITY_H

@@ -186,6 +186,7 @@ class ServerUtility {
                 user.second.friends.erase(account);
                 user.second.friendRequest.erase(account);
             }
+            printf("Account %s has been deleted!\n", account);
             std::string toSend = "Delete Successfully!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
@@ -210,6 +211,7 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s%s%s", account, name, birthday);
             serverData[account].name = name;
             serverData[account].birthday = birthday;
+            printf("Profile of account %s has been updated!\n", account);
             std::string toSend = "Profile Setting Success!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
@@ -251,6 +253,7 @@ class ServerUtility {
                     }
                     articles.getArticle(index).viewer.insert(std::make_pair(account, true));
                 }
+                printf("New article with index %d has been created\n", index);
                 char buffer[MAXN];
                 snprintf(buffer, MAXN, "%d", index);
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
@@ -269,6 +272,7 @@ class ServerUtility {
                     title = "";
                 }
                 articles.getArticle(index).title = title;
+                printf("Article title of index %d has been modified\n", index);
                 char buffer[MAXN];
                 snprintf(buffer, MAXN, "%d", index);
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
@@ -287,6 +291,7 @@ class ServerUtility {
                     content = "";
                 }
                 articles.getArticle(index).content = content;
+                printf("Article content of index %d has been modified\n", index);
                 std::string toSend = "Article Added Successfully!\n";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
             }
@@ -324,14 +329,17 @@ class ServerUtility {
                         articles.getArticle(index).viewer.insert(std::make_pair(account, true));
                     }
                 }
+                printf("Article property of index %d has been modified\n", index);
             }
             else if (config == 1) {
                 std::string title = msg.substr(offset);
                 articles.getArticle(index).title = title;
+                printf("Article title of index %d has been modified\n", index);
             }
             else if (config == 2) {
                 std::string content = msg.substr(offset);
                 articles.getArticle(index).content = content;
+                printf("Article content of index %d has been modified\n", index);
             }
             articles.getArticle(index).timeStamp = time(NULL);
             std::string toSend = "Edit Success!\n";
@@ -350,6 +358,7 @@ class ServerUtility {
             }
             else {
                 articles.removeArticle(index);
+                printf("Article of Index %d has been deleted\n", index);
                 toSend = msgSUCCESS;
             }
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
@@ -685,6 +694,75 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
+        static void udpFileNew(const int& fd, sockaddr*& clientAddrp, const char* msg) {
+            // start: FILENEW filename
+            // server return SUCCESS!
+            char filenameCStr[MAXN];
+            std::string filename;
+            sscanf(msg + msgFILENEW.length() + 1, "%s", filenameCStr);
+            filename = std::string("Upload/") + std::string(filenameCStr);
+            FILE* fp = fopen(filename.c_str(), "wb");
+            if (!fp) {
+                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
+                std::string toSend = msgFAIL;
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            fclose(fp);
+            std::string result = msgSUCCESS;
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
+        static void udpFileSeq(const int& fd, sockaddr*& clientAddrp, const char* msg) {
+            // continue: FILESEQ filename byteInFile n content(content at most 1500)
+            // server return n
+            char filenameCStr[MAXN];
+            std::string filename;
+            unsigned long offset;
+            int byteToWrite;
+            sscanf(msg + msgFILESEQ.length() + 1, "%s%lu%d", filenameCStr, &offset, &byteToWrite);
+            filename = std::string("Upload/") + filenameCStr;
+            unsigned msgOffset = msgFILESEQ.length() + 1 +
+                                 std::string(filenameCStr).length() + 1 +
+                                 std::to_string(offset).length() + 1 +
+                                 std::to_string(byteToWrite).length() + 1 + 1;
+            struct stat fileStat;
+            stat(filename.c_str(), &fileStat);
+            if (static_cast<unsigned long>(fileStat.st_size) < offset) {
+                std::string toSend = "0";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            FILE* fp = fopen(filename.c_str(), "ab");
+            int n = write(fileno(fp), msg + msgOffset, byteToWrite);
+            std::string result = std::to_string(n);
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+            fclose(fp);
+        }
+
+        static void udpFileEnd(const int& fd, sockaddr*& clientAddrp, const char* msg) {
+            // end: FILEEND filename filesize
+            // server return check result
+            char filenameCStr[MAXN];
+            std::string filename;
+            unsigned long fileSize;
+            unsigned long long hash;
+            sscanf(msg, "%*s%s%lu%llx", filenameCStr, &fileSize, &hash);
+            filename = std::string("Upload/") + filenameCStr;
+            struct stat fileStat;
+            stat(filename.c_str(), &fileStat);
+            unsigned long long easyHash = fileHash(filename);
+            std::string result;
+            if (static_cast<unsigned long>(fileStat.st_size) == fileSize &&
+                hash == easyHash) {
+                result = msgSUCCESS;
+            }
+            else {
+                result = msgFAIL;
+            }
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
     private:
         static bool canViewArticle(const std::string& account, const ArticleData& article) {
             if (article.permission == NPArticlePermission::PUBLIC) {
@@ -740,6 +818,8 @@ int main(int argc, char const** argv) {
     bind(socketfd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr));
     // set timeout
     setSocketTimeout(socketfd, 0, 200);
+    // prepare Upload folder
+    mkdir("Upload", 0777);
     // run server function
     serverFunc(socketfd);
     return 0;
@@ -857,6 +937,15 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgFILENEW) == 0u) {
+                ServerUtility::udpFileNew(fd, clientAddrp, buffer);
+            }
+            else if (msg.find(msgFILESEQ) == 0u) {
+                ServerUtility::udpFileSeq(fd, clientAddrp, buffer);
+            }
+            else if (msg.find(msgFILEEND) == 0u) {
+                ServerUtility::udpFileEnd(fd, clientAddrp, buffer);
             }
         }
     }

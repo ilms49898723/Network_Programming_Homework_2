@@ -24,6 +24,28 @@ int stringHash(const char* src, size_t len) {
     return ret;
 }
 
+unsigned long long fileHash(const std::string& filename) {
+    FILE* fp = fopen(filename.c_str(), "rb");
+    unsigned long long ret = 0u;
+    unsigned c = 0xdefaced;
+    unsigned coef = 31;
+    unsigned char buffer[4];
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        int n = read(fileno(fp), buffer, sizeof(unsigned char) * 4);
+        if (n <= 0) {
+            break;
+        }
+        unsigned tmp = (buffer[0] << 24) |
+                       (buffer[1] << 16) |
+                       (buffer[2] << 8) |
+                       (buffer[3]);
+        ret += (tmp & c) * coef + c;
+        coef *= 31;
+    }
+    return ret;
+}
+
 ConnectInfo getConnectInfo(const sockaddr_in& sock) {
     ConnectInfo ret;
     ret.address = inet_ntoa(sock.sin_addr);

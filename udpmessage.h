@@ -4,10 +4,11 @@
 #include <string>
 
 const std::string msgOptWELCOME = "[L]Login  [R]Register  [Q]Quit\n";
-const std::string msgOptMAIN = std::string("[SP]Show  Profile  [SE]Set Profile\n") +
+const std::string msgOptMAIN = std::string("[SP]Show Profile   [SE]Set Profile\n") +
                                std::string("[SA]Show Article   [A]Add Article     [E]Enter Article\n") +
                                std::string("[F]Friends         [C]Chat            [S]Search User\n") +
-                               std::string("[L]Logout          [DA]Delete Account\n");
+                               std::string("[U]Upload File     [D]Download File\n") +
+                               std::string("[DA]Delete Account [L]Logout\n");
 const std::string msgOptARTICLE = std::string("[L]Like            [UL]Unlike\n") +
                                   std::string("[C]Comment         [EC]Edit Last Comment  [DC]Delete Last Comment\n") +
                                   std::string("[E]Edit Article    [D]Delete Article      [Q]Quit\n");
@@ -39,7 +40,13 @@ const std::string msgSHOWFRIENDS = "SHOWFRIENDS";
 const std::string msgACCEPTFRIENDREQUEST = "ACCEPTFRIENDREQUEST";
 const std::string msgREJECTFRIENDREQUEST = "REJECTFRIENDREQUEST";
 
+const std::string msgFILENEW = "FILENEW";
+const std::string msgFILESEQ = "FILESEQ";
+const std::string msgFILEEND = "FILEEND";
+const std::string msgFILEREQ = "FILEREQ";
+
 const std::string msgSUCCESS = "Success!\n";
+const std::string msgFAIL = "Failed!\n";
 const std::string msgPERMISSIONDENIED = "Permission Denied!\n";
 const std::string msgUSERNOTFOUND = "User not found!\n";
 const std::string msgARTICLENOTFOUND = "This article doesn\'t exist anymore!\n";
