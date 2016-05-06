@@ -101,6 +101,10 @@ class Articles {
             return articles[index];
         }
 
+        const std::map<int, ArticleData>& getArticles() const {
+            return articles;
+        }
+
     private:
         int index;
         // map for article index --> article content
@@ -145,7 +149,7 @@ class ServerUtility {
                 snprintf(buffer, MAXN, "Invalid account or password\n");
             }
             else {
-                snprintf(buffer, MAXN, "\nLogin Success!\n\nWelcome %s\nLast Login %s\n",
+                snprintf(buffer, MAXN, "Login Success!\n\nWelcome %s\nLast Login %s\n",
                         serverData[account].name == "" ? account : serverData[account].name.c_str(),
                         asctime(localtime(&serverData[account].lastLogin)));
                 serverData[account].isOnline = true;
@@ -161,7 +165,7 @@ class ServerUtility {
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             sscanf(msg.c_str(), "%*s%s", account);
-            snprintf(buffer, MAXN, "\nLogout Success!\n\n");
+            snprintf(buffer, MAXN, "Logout Success!\n\n");
             serverData[account].isOnline = false;
             printf("Account %s logout at %s", account, asctime(localtime(&serverData[account].lastLogin)));
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
@@ -219,16 +223,16 @@ class ServerUtility {
                 articles.getArticle(index).author = account;
                 articles.getArticle(index).timeStamp = time(NULL);
                 articles.getArticle(index).source = lastIP + ":" + lastPort;
-                if (viewType == 0) {
+                if (viewType == 1) {
                     articles.getArticle(index).permission = NPArticlePermission::PUBLIC;
                 }
-                else if (viewType == 1) {
+                else if (viewType == 2) {
                     articles.getArticle(index).permission = NPArticlePermission::AUTHOR;
                 }
-                else if (viewType == 2) {
+                else if (viewType == 3) {
                     articles.getArticle(index).permission = NPArticlePermission::FRIENDS;
                 }
-                else if (viewType == 3) {
+                else if (viewType == 4) {
                     articles.getArticle(index).permission = NPArticlePermission::SPEC;
                     std::string viewer;
                     while (iss >> viewer) {
@@ -281,12 +285,49 @@ class ServerUtility {
             }
         }
 
+        static void udpShowArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: SHOWARTICLE account
+            // 24 time (maybe use 27 for width)
+            char account[MAXN];
+            char buffer[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            std::string toSend = "Index   Time                       Title                          Author\n";
+            for (const auto& item : articles.getArticles()) {
+                if (!canViewArticle(account, item.second)) {
+                    continue;
+                }
+                snprintf(buffer, MAXN, "%5d", item.first);
+                toSend += std::string(buffer) + "   ";
+                snprintf(buffer, MAXN, "%-26s", asctime(localtime(&item.second.timeStamp)));
+                for (char* ptr = buffer; *ptr; ++ptr) {
+                    if (*ptr == '\n') {
+                        *ptr = ' ';
+                    }
+                }
+                toSend += std::string(buffer) + " ";
+                snprintf(buffer, MAXN, "%-30s", item.second.title.c_str());
+                toSend += std::string(buffer) + " ";
+                snprintf(buffer, MAXN, "%s", item.second.author.c_str());
+                toSend += std::string(buffer) + "\n";
+            }
+            toSend += "\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
         static void udpEnterArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
-            // format: ENTERARTICLE index
+            // format: ENTERARTICLE account index
+            char account[MAXN];
             int index;
-            sscanf(msg.c_str(), "%*s%d", &index);
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = "Permission Denied!\n";
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
+                return;
+            }
             std::string timeString = asctime(localtime(&articles.getArticle(index).timeStamp));
-            std::string toSend = "\n";
+            std::string toSend = "";
             toSend += "Title: " + articles.getArticle(index).title + "\n";
             toSend += "   By: " + articles.getArticle(index).author + "\n";
             toSend += " From: " + articles.getArticle(index).source + "\n";
@@ -322,6 +363,29 @@ class ServerUtility {
             }
             std::string toSend = "Like Successfully!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+    private:
+        static bool canViewArticle(const std::string& account, const ArticleData& article) {
+            if (article.permission == NPArticlePermission::PUBLIC) {
+                return true;
+            }
+            else if (article.permission == NPArticlePermission::AUTHOR) {
+                return account == article.author;
+            }
+            else if (article.permission == NPArticlePermission::FRIENDS) {
+                if (serverData.count(article.author) == 0) {
+                    return false;
+                }
+                for (const auto& who : serverData[article.author].friends) {
+                    if (account == who) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            else {
+                return (article.viewer.count(account) > 0);
+            }
         }
 };
 
@@ -400,7 +464,6 @@ void serverFunc(const int& fd) {
             lastIP = inet_ntoa(clientAddr.sin_addr);
             lastPort = std::to_string(static_cast<int>(ntohs(clientAddr.sin_port)));
             std::string msg = buffer;
-            printf("get %s\n", msg.c_str());
             if (msg == msgNEWCONNECTION) {
                 snprintf(buffer, MAXN, "WELCOME!\n");
                 udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
@@ -423,15 +486,18 @@ void serverFunc(const int& fd) {
             else if (msg.find(msgSETPROFILE) == 0u) {
                 ServerUtility::udpSetProfile(fd, clientAddrp, msg);
             }
+            else if (msg.find(msgSHOWARTICLE) == 0u) {
+                ServerUtility::udpShowArticle(fd, clientAddrp, msg);
+            }
             else if (msg.find(msgADDARTICLE) == 0u) {
                 ServerUtility::udpAddArticle(fd, clientAddrp, msg);
             }
             else if (msg.find(msgENTERARTICLE) == 0u) {
                 ServerUtility::udpEnterArticle(fd, clientAddrp, msg);
             }
-            //else if (msg.find(msgLIKEARTICLE) == 0u) {
-            //    ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
-            //}
+            else if (msg.find(msgLIKEARTICLE) == 0u) {
+                ServerUtility::udpLikeArticle(fd, clientAddrp, msg);
+            }
         }
     }
 }

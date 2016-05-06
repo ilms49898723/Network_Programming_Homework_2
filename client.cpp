@@ -41,7 +41,7 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
         }
 
         static void udpLogin(const int& fd, sockaddr*& serverAddrp) {
@@ -70,8 +70,8 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
-            if (std::string(buffer).find("\nLogin Success!\n\n") != std::string::npos) {
+            printf("\n%s\n", buffer);
+            if (std::string(buffer).find("Login Success!\n\n") != std::string::npos) {
                 nowStage = NPStage::MAIN;
                 nowAccount = account;
             }
@@ -83,8 +83,8 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
-            if (std::string(buffer).find("\nLogout Success!\n\n") != std::string::npos) {
+            printf("\n%s\n", buffer);
+            if (std::string(buffer).find("Logout Success!\n\n") != std::string::npos) {
                 nowStage = NPStage::WELCOME;
                 nowAccount = "";
             }
@@ -103,7 +103,7 @@ class ClientUtility {
                 if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                     return;
                 }
-                printf("%s\n", buffer);
+                printf("\n%s\n", buffer);
                 nowStage = NPStage::WELCOME;
                 nowAccount = "";
             }
@@ -118,7 +118,7 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
         }
 
         static void udpSetProfile(const int& fd, sockaddr*& serverAddrp) {
@@ -139,7 +139,14 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
+        }
+
+        static void udpShowArticle(const int& fd, sockaddr*& serverAddrp) {
+            std::string msg = msgSHOWARTICLE + " " + nowAccount;
+            char buffer[MAXN];
+            udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+            printf("\n%s\n", buffer);
         }
 
         static void udpAddArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -152,17 +159,13 @@ class ClientUtility {
             std::string msg;
             msg = msgADDARTICLE + " 0 " + nowAccount;
             char buffer[MAXN];
-            printf("set permission for this article(0:public, 1:author, 2:friend, 3:specific):");
+            printf("Set permission(1:public, 2:author, 3:friend, 4:specific): ");
             while (true) {
                 if (fgets(buffer, MAXN, stdin) == NULL) {
                     return;
                 }
                 trimNewLine(buffer);
-                if (std::string(buffer) == "0") {
-                    msg = msg + " " + buffer;
-                    break;
-                }
-                else if (std::string(buffer) == "1") {
+                if (std::string(buffer) == "1") {
                     msg = msg + " " + buffer;
                     break;
                 }
@@ -172,7 +175,11 @@ class ClientUtility {
                 }
                 else if (std::string(buffer) == "3") {
                     msg = msg + " " + buffer;
-                    printf("Please enter account(one per line) who can view this article, press ^D to finish\n");
+                    break;
+                }
+                else if (std::string(buffer) == "4") {
+                    msg = msg + " " + buffer;
+                    printf("Please enter account(one per line) who can view this article\nPress ^D to finish\n");
                     char viewAccount[MAXN];
                     while (fgets(viewAccount, MAXN, stdin) != NULL) {
                         msg = msg + " " + viewAccount;
@@ -180,7 +187,7 @@ class ClientUtility {
                     break;
                 }
                 else {
-                    printf("Please enter number between 0 to 3: ");
+                    printf("Please enter number between 1 to 4: ");
                 }
             }
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
@@ -201,14 +208,14 @@ class ClientUtility {
             }
             msg = msgADDARTICLE + " 2 " + std::to_string(articleIndex) + " ";
             char content[MAXN];
-            printf("Article content(press ^D to finish):\n");
+            printf("Content(press ^D to finish):\n");
             while (fgets(content, MAXN, stdin) != NULL) {
                 msg = msg + content;
             }
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
         }
 
         static void udpEnterArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -223,11 +230,14 @@ class ClientUtility {
                     break;
                 }
             }
-            std::string msg = msgENTERARTICLE + " " + std::to_string(index);
+            std::string msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(index);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
+            if (std::string(buffer) == "Permission Denied!\n") {
+                return;
+            }
             nowArticleIndex = index;
             nowStage = NPStage::ARTICLE;
         }
@@ -238,12 +248,12 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
             msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("%s\n", buffer);
+            printf("\n%s\n", buffer);
         }
 
     private:
@@ -363,6 +373,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     else if (command.find("SE") == 0u) {
                         ClientUtility::udpSetProfile(fd, serverAddrp);
+                    }
+                    else if (command.find("SA") == 0u) {
+                        ClientUtility::udpShowArticle(fd, serverAddrp);
                     }
                     else if (command.find("A") == 0u) {
                         ClientUtility::udpAddArticle(fd, serverAddrp);
