@@ -28,10 +28,7 @@ class ClientUtility {
                 fprintf(stderr, "Account may not contain space or tab character\n");
                 return;
             }
-            printf("Password: ");
-            if (fgets(password, MAXN, stdin) == NULL) {
-                return;
-            }
+            strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
                 fprintf(stderr, "Password may not contain space or tab character\n");
@@ -57,10 +54,7 @@ class ClientUtility {
                 fprintf(stderr, "Account may not contain space or tab character\n");
                 return;
             }
-            printf("Password: ");
-            if (fgets(password, MAXN, stdin) == NULL) {
-                return;
-            }
+            strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
                 fprintf(stderr, "Password may not contain space or tab character\n");
