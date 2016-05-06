@@ -101,7 +101,7 @@ class Articles {
             return articles[index];
         }
 
-        const std::map<int, ArticleData>& getArticles() const {
+        const std::map<int, ArticleData>& getAllArticles() const {
             return articles;
         }
 
@@ -292,7 +292,7 @@ class ServerUtility {
             char buffer[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             std::string toSend = "Index   Time                       Title                          Author\n";
-            for (const auto& item : articles.getArticles()) {
+            for (const auto& item : articles.getAllArticles()) {
                 if (!canViewArticle(account, item.second)) {
                     continue;
                 }
