@@ -142,15 +142,6 @@ class ClientUtility {
             printf("\n%s\n", buffer);
         }
 
-        static void udpShowArticle(const int& fd, sockaddr*& serverAddrp) {
-            std::string msg = msgSHOWARTICLE + " " + nowAccount;
-            char buffer[MAXN];
-            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
-                return;
-            }
-            printf("\n%s\n", buffer);
-        }
-
         static void udpAddArticle(const int& fd, sockaddr*& serverAddrp) {
             // format: ADDARTICLE 0 account viewerType [viewers]
             // server return article index
@@ -234,7 +225,7 @@ class ClientUtility {
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            if (std::string(buffer) == "Permission Denied!\n") {
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
                 printf("\n%s\n", buffer);
                 return;
             }
@@ -324,6 +315,29 @@ class ClientUtility {
             printf("\n%s\n", buffer);
         }
 
+        static void udpDeleteArticle(const int& fd, sockaddr*& serverAddrp) {
+            std::string msg = msgDELETEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            char buffer[MAXN];
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                return;
+            }
+            nowArticleIndex = 0;
+            nowStage = NPStage::MAIN;
+        }
+
+        static void udpShowArticle(const int& fd, sockaddr*& serverAddrp) {
+            std::string msg = msgSHOWARTICLE + " " + nowAccount;
+            char buffer[MAXN];
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
         static void udpEnterArticle(const int& fd, sockaddr*& serverAddrp) {
             char buffer[MAXN];
             int index;
@@ -341,7 +355,7 @@ class ClientUtility {
                 return;
             }
             printf("\n%s\n", buffer);
-            if (std::string(buffer) == "Permission Denied!\n") {
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
                 return;
             }
             nowArticleIndex = index;
@@ -355,6 +369,11 @@ class ClientUtility {
                 return;
             }
             printf("\n%s\n", buffer);
+            if (std::string(buffer) == msgARTICLENOTFOUND) {
+                nowArticleIndex = 0;
+                nowStage = NPStage::MAIN;
+                return;
+            }
             msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
@@ -504,7 +523,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpEditArticle(fd, serverAddrp);
                     }
                     else if (command.find("D") == 0u) {
-
+                        ClientUtility::udpDeleteArticle(fd, serverAddrp);
                     }
             }
             printMessage(nowStage);

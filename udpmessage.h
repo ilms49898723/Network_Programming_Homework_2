@@ -22,10 +22,15 @@ const std::string msgSHOWPROFILE = "SHOWPROFILE";
 const std::string msgSETPROFILE = "SETPROFILE";
 const std::string msgADDARTICLE = "ADDARTICLE";
 const std::string msgEDITARTICLE = "EDITARTICLE";
+const std::string msgDELETEARTICLE = "DELETEARTICLE";
 const std::string msgSHOWARTICLE = "SHOWARTICLE";
 const std::string msgENTERARTICLE = "ENTERARTICLE";
 const std::string msgLIKEARTICLE = "LIKEARTICLE";
 const std::string msgCHECKARTICLEPERMISSION = "CHECKARTICLEPERMISSION";
+
+const std::string msgSUCCESS = "Success!\n";
+const std::string msgPERMISSIONDENIED = "Permission Denied!\n";
+const std::string msgARTICLENOTFOUND = "This article doesn\'t exist anymore!\n";
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_UDPMESSAGE_H_
 

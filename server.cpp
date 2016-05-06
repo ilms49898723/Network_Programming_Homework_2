@@ -97,6 +97,10 @@ class Articles {
             articles.insert(std::make_pair(index, ArticleData()));
         }
 
+        void removeArticle(int index) {
+            articles.erase(index);
+        }
+
         ArticleData& getArticle(int index) {
             return articles[index];
         }
@@ -326,6 +330,22 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
+        static void udpDeleteArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: DELETEARTICLE account index
+            char account[MAXN];
+            int index;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            std::string toSend;
+            if (articles.getArticle(index).author != account) {
+                toSend = msgPERMISSIONDENIED;
+            }
+            else {
+                articles.removeArticle(index);
+                toSend = msgSUCCESS;
+            }
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
         static void udpShowArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             // format: SHOWARTICLE account
             // 24 time (maybe use 27 for width)
@@ -362,8 +382,9 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
             if (index >= articles.getIndex() ||
                 index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
                 !canViewArticle(account, articles.getArticle(index))) {
-                std::string toS = "Permission Denied!\n";
+                std::string toS = msgPERMISSIONDENIED;
                 udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
                 return;
             }
@@ -392,6 +413,11 @@ class ServerUtility {
             char account[MAXN];
             int index;
             sscanf(msg.c_str(), "%*s%d%s", &index, account);
+            if (articles.getAllArticles().count(index) < 1) {
+                std::string toS = msgARTICLENOTFOUND;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
+                return;
+            }
             bool notInLiker = true;
             for (const auto& who : articles.getArticle(index).liker) {
                 if (who == account) {
@@ -412,13 +438,13 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
             std::string toSend;
             if (index < 0 || index >= articles.getIndex()) {
-                toSend = "Permission Denied!\n";
+                toSend = msgPERMISSIONDENIED;
             }
             else if (articles.getArticle(index).author != account) {
-                toSend = "Permission Denied!\n";
+                toSend = msgPERMISSIONDENIED;
             }
             else {
-                toSend = "ALL OK!\n";
+                toSend = msgSUCCESS;
             }
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
@@ -553,6 +579,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgEDITARTICLE) == 0u) {
                 ServerUtility::udpEditArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgDELETEARTICLE) == 0u) {
+                ServerUtility::udpDeleteArticle(fd, clientAddrp, msg);
             }
             else if (msg.find(msgENTERARTICLE) == 0u) {
                 ServerUtility::udpEnterArticle(fd, clientAddrp, msg);
