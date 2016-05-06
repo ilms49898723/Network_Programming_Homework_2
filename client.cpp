@@ -83,6 +83,26 @@ class ClientUtility {
             }
         }
 
+        static void udpDeleteAccount(const int& fd, sockaddr*& serverAddrp) {
+            char buffer[MAXN];
+            printf("ARE YOU SURE?(yes/no): ");
+            if (fgets(buffer, MAXN, stdin) == NULL) {
+                printf("CANCELED\n\n");
+                return;
+            }
+            trimNewLine(buffer);
+            if (std::string(buffer) == "yes") {
+                std::string msg = msgDELETEACCOUNT + " " + nowAccount;
+                udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length());
+                printf("%s\n", buffer);
+                nowStage = NPStage::WELCOME;
+                nowAccount = "";
+            }
+            else {
+                printf("CANCELED\n\n");
+            }
+        }
+
         static void udpShowProfile(const int& fd, sockaddr*& serverAddrp) {
             char buffer[MAXN];
             std::string msg = msgSHOWPROFILE + " " + nowAccount;
@@ -295,6 +315,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 case 2:
                     if (command.find("L") == 0u) {
                         ClientUtility::udpLogout(fd, serverAddrp);
+                    }
+                    else if (command.find("DA") == 0u) {
+                        ClientUtility::udpDeleteAccount(fd, serverAddrp);
                     }
                     else if (command.find("SP") == 0u) {
                         ClientUtility::udpShowProfile(fd, serverAddrp);

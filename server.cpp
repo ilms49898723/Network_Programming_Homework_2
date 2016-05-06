@@ -167,6 +167,14 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
 
+        static void udpDeleteAccount(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            serverData.erase(account);
+            std::string toSend = "Delete Successfully!\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
         static void udpShowProfile(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
@@ -375,6 +383,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgLOGOUT) == 0u) {
                 ServerUtility::udpLogout(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgDELETEACCOUNT) == 0u) {
+                ServerUtility::udpDeleteAccount(fd, clientAddrp, msg);
             }
             else if (msg.find(msgSHOWPROFILE) == 0u) {
                 ServerUtility::udpShowProfile(fd, clientAddrp, msg);
