@@ -467,6 +467,16 @@ class ClientUtility {
             printf("\n%s\n", buffer);
         }
 
+        static void udpShowFriends(const int& fd, sockaddr*& serverAddrp) {
+            std::string msg = msgSHOWFRIENDS + " " + nowAccount;
+            char buffer[MAXN];
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            nowStage = NPStage::FRIENDS;
+        }
+
         static void udpSearchUser(const int& fd, sockaddr*& serverAddrp) {
             char buffer[MAXN];
             int type;
@@ -506,6 +516,46 @@ class ClientUtility {
                 return;
             }
             std::string msg = msgSENDFRIENDREQUEST + " " + nowAccount + " " + target;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
+        static void udpAcceptFrientRequest(const int& fd, sockaddr*& serverAddrp) {
+            char target[MAXN];
+            char buffer[MAXN];
+            printf("Account to accept request: ");
+            if (fgets(target, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(target);
+            std::string msg = msgACCEPTFRIENDREQUEST + " " + nowAccount + " " + target;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            msg = msgSHOWFRIENDS + " " + nowAccount;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
+        static void udpRejectFriendRequest(const int& fd, sockaddr*& serverAddrp) {
+            char target[MAXN];
+            char buffer[MAXN];
+            printf("Account to reject request: ");
+            if (fgets(target, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(target);
+            std::string msg = msgREJECTFRIENDREQUEST + " " + nowAccount + " " + target;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            msg = msgSHOWFRIENDS + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
@@ -639,6 +689,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else if (command.find("E") == 0u) {
                         ClientUtility::udpEnterArticle(fd, serverAddrp);
                     }
+                    else if (command.find("F") == 0u) {
+                        ClientUtility::udpShowFriends(fd, serverAddrp);
+                    }
                     else if (command.find("S") == 0u) {
                         ClientUtility::udpSearchUser(fd, serverAddrp);
                     }
@@ -686,6 +739,21 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else {
                         fprintf(stderr, "Invalid Command\n");
                     }
+                    break;
+                case 5: // friends
+                    if (command.find("Q") == 0u) {
+                        nowStage = NPStage::MAIN;
+                    }
+                    else if (command.find("A") == 0u) {
+                        ClientUtility::udpAcceptFrientRequest(fd, serverAddrp);
+                    }
+                    else if (command.find("R") == 0u) {
+                        ClientUtility::udpRejectFriendRequest(fd, serverAddrp);
+                    }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
+                    break;
                 default:
                     break;
             }
@@ -709,6 +777,9 @@ void printMessage(const NPStage& stage) {
             break;
         case 4: // search
             printf("%s~ ", msgOptSEARCH.c_str());
+            break;
+        case 5: // friends
+            printf("%s~ ", msgOptFRIENDS.c_str());
             break;
     }
     fflush(stdout);

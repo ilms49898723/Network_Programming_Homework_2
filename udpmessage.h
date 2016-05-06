@@ -4,15 +4,16 @@
 #include <string>
 
 const std::string msgOptWELCOME = "[L]Login  [R]Register  [Q]Quit\n";
-const std::string msgOptMAIN = std::string("[SP]Show Profile [SE]Set Profile\n") +
-                               std::string("[SA]Show Article [A]Add Article [E]Enter Article\n") +
-                               std::string("[F]Friends [C]Chat [S]Search User\n") +
-                               std::string("[L]Logout [DA]Delete Account\n");
-const std::string msgOptARTICLE = std::string("[L]Like [UL]Unlike\n") +
-                                  std::string("[C]Comment [EC]Edit Last Comment [DC]Delete Last Comment\n") +
-                                  std::string("[E]Edit Article [D]Delete Article [Q]Quit\n");
+const std::string msgOptMAIN = std::string("[SP]Show  Profile  [SE]Set Profile\n") +
+                               std::string("[SA]Show Article   [A]Add Article     [E]Enter Article\n") +
+                               std::string("[F]Friends         [C]Chat            [S]Search User\n") +
+                               std::string("[L]Logout          [DA]Delete Account\n");
+const std::string msgOptARTICLE = std::string("[L]Like            [UL]Unlike\n") +
+                                  std::string("[C]Comment         [EC]Edit Last Comment  [DC]Delete Last Comment\n") +
+                                  std::string("[E]Edit Article    [D]Delete Article      [Q]Quit\n");
 const std::string msgOptEDITARTICLE = "[P]Change Permission [T]Change Title [C]Change content [Q]Quit\n";
 const std::string msgOptSEARCH = std::string("[S]Send Friend Request  [Q]Quit\n");
+const std::string msgOptFRIENDS = std::string("[A]Accept Request  [R]Reject Request  [Q]Quit\n");
 
 const std::string msgNEWCONNECTION = "NEWCONNECTION";
 const std::string msgREGISTER = "REGISTER";
@@ -35,6 +36,8 @@ const std::string msgCHECKARTICLEPERMISSION = "CHECKARTICLEPERMISSION";
 const std::string msgSEARCHUSER = "SEARCHUSER";
 const std::string msgSENDFRIENDREQUEST = "SENDFRIENDREQUEST";
 const std::string msgSHOWFRIENDS = "SHOWFRIENDS";
+const std::string msgACCEPTFRIENDREQUEST = "ACCEPTFRIENDREQUEST";
+const std::string msgREJECTFRIENDREQUEST = "REJECTFRIENDREQUEST";
 
 const std::string msgSUCCESS = "Success!\n";
 const std::string msgPERMISSIONDENIED = "Permission Denied!\n";

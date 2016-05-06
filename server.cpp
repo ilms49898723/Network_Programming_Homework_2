@@ -40,7 +40,7 @@ class UserData {
         std::string password;
         std::string name;
         std::string birthday;
-        std::deque<std::string> friendRequest;
+        std::map<std::string, bool> friendRequest;
         std::map<std::string, bool> friends;
         time_t registerDate;
         time_t lastLogin;
@@ -182,6 +182,10 @@ class ServerUtility {
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             serverData.erase(account);
+            for (auto user : serverData) {
+                user.second.friends.erase(account);
+                user.second.friendRequest.erase(account);
+            }
             std::string toSend = "Delete Successfully!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
@@ -538,6 +542,34 @@ class ServerUtility {
             }
         }
 
+        static void udpShowFriends(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            std::string result = "Friends: \n";
+            for (const auto& who : serverData[account].friends) {
+                if (serverData.count(who.first) < 1) {
+                    continue;
+                }
+                result += std::string("    ") + who.first + "  ";
+                if (serverData[who.first].isOnline) {
+                    result += "[Online]\n";
+                }
+                else {
+                    std::string lastOnline = asctime(localtime(&serverData[who.first].lastLogin));
+                    result += "[Offline]  Last Login: " + lastOnline;
+                }
+            }
+            result += "Requests: \n";
+            for (const auto& who : serverData[account].friendRequest) {
+                if (serverData.count(who.first) < 1) {
+                    continue;
+                }
+                result += std::string("    ") + who.first + "\n";
+            }
+            result += "\n";
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
         static void udpSearchUser(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             // format: SEARCHUSER type keyword
             int type;
@@ -579,8 +611,60 @@ class ServerUtility {
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
-            serverData[target].friendRequest.push_back(source);
+            if (serverData[target].friends.count(source) == 1) {
+                std::string toSend = "Already be friends!\n";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            if (serverData[target].friendRequest.count(source) == 1) {
+                std::string toSend = "Friend Request has already sent!\n";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            serverData[target].friendRequest.insert(std::make_pair(source, true));
             std::string result = "Friend Request Sent!\n";
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
+        static void udpAcceptFrientRequest(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format ACCEPTFRIENDREQUEST src dst
+            char source[MAXN];
+            char target[MAXN];
+            sscanf(msg.c_str(), "%*s%s%s", source, target);
+            if (serverData.count(target) < 1) {
+                std::string toSend = msgUSERNOTFOUND;
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            if (serverData[source].friendRequest.count(target) == 0) {
+                std::string toSend = std::string(target) + " doesn\'t send you a friend request\n";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            serverData[source].friendRequest.erase(target);
+            serverData[source].friends.insert(std::make_pair(target, true));
+            serverData[target].friends.insert(std::make_pair(source, true));
+            std::string result = "Accepted Successfully!\n";
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
+        static void udpRejectFriendRequest(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format REJECTFRIENDREQUEST src dst
+            char source[MAXN];
+            char target[MAXN];
+            sscanf(msg.c_str(), "%*s%s%s", source, target);
+            if (serverData.count(target) < 1) {
+                std::string toSend = msgUSERNOTFOUND;
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            if (serverData[source].friendRequest.count(target) == 0) {
+                std::string toSend = std::string(target) + " doesn\'t send you a friend request\n";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            serverData[source].friendRequest.erase(target);
+            std::string result = "Rejected Successfully!\n";
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
@@ -612,6 +696,9 @@ class ServerUtility {
             else if (article.permission == NPArticlePermission::FRIENDS) {
                 if (serverData.count(article.author) == 0) {
                     return false;
+                }
+                if (account == article.author) {
+                    return true;
                 }
                 for (const auto& who : serverData[article.author].friends) {
                     if (account == who.first) {
@@ -758,6 +845,15 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgSENDFRIENDREQUEST) == 0u) {
                 ServerUtility::udpSendFriendRequest(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgSHOWFRIENDS) == 0u) {
+                ServerUtility::udpShowFriends(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgACCEPTFRIENDREQUEST) == 0u) {
+                ServerUtility::udpAcceptFrientRequest(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgREJECTFRIENDREQUEST) == 0u) {
+                ServerUtility::udpRejectFriendRequest(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);
