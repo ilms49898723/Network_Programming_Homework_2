@@ -72,7 +72,7 @@ class ArticleData {
         // viewers setting
         NPArticlePermission permission;
         // viewer list(only when permission == SPEC
-        std::vector<std::string> viewer;
+        std::map<std::string, bool> viewer;
 };
 
 class Articles {
@@ -232,8 +232,9 @@ class ServerUtility {
                     articles.getArticle(index).permission = NPArticlePermission::SPEC;
                     std::string viewer;
                     while (iss >> viewer) {
-                        articles.getArticle(index).viewer.push_back(viewer);
+                        articles.getArticle(index).viewer.insert(std::make_pair(viewer, true));
                     }
+                    articles.getArticle(index).viewer.insert(std::make_pair(account, true));
                 }
                 char buffer[MAXN];
                 snprintf(buffer, MAXN, "%d", index);
