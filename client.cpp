@@ -394,6 +394,79 @@ class ClientUtility {
             printf("\n%s\n", buffer);
         }
 
+        static void udpCommentArticle(const int& fd, sockaddr*& serverAddrp) {
+            // format: COMMENTARTICLE account index message
+            char buffer[MAXN];
+            printf("Comment: ");
+            if (fgets(buffer, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(buffer);
+            std::string msg = msgCOMMENTARTICLE + " " + nowAccount + " " +
+                              std::to_string(nowArticleIndex) + " " + buffer;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            if (std::string(buffer) == msgARTICLENOTFOUND) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                return;
+            }
+            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
+        static void udpEditCommentArticle(const int& fd, sockaddr*& serverAddrp) {
+            // format: EDITCOMMENTARTICLE account index message
+            char buffer[MAXN];
+            printf("Comment: ");
+            if (fgets(buffer, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(buffer);
+            std::string msg = msgEDITCOMMENTARTICLE + " " + nowAccount + " " +
+                              std::to_string(nowArticleIndex) + " " + buffer;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            if (std::string(buffer) == msgARTICLENOTFOUND) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                return;
+            }
+            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
+        static void udpDeleteCommentArticle(const int& fd, sockaddr*& serverAddrp) {
+            // format DELETECOMMENTARTICLE account index
+            std::string msg = msgDELETECOMMENTARTICLE + " " + nowAccount + " " +
+                              std::to_string(nowArticleIndex);
+            char buffer[MAXN];
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            if (std::string(buffer) == msgARTICLENOTFOUND) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                return;
+            }
+            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
     private:
         static bool isValidString(const std::string& str) {
             for (char c : str) {
@@ -527,7 +600,14 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         nowArticleIndex = -1;
                         nowStage =NPStage::MAIN;
                     }
-                    else if (command.find("R") == 0u) {
+                    else if (command.find("C") == 0u) {
+                        ClientUtility::udpCommentArticle(fd, serverAddrp);
+                    }
+                    else if (command.find("EC") == 0u) {
+                        ClientUtility::udpEditCommentArticle(fd, serverAddrp);
+                    }
+                    else if (command.find("DC") == 0u) {
+                        ClientUtility::udpDeleteCommentArticle(fd, serverAddrp);
                     }
                     else if (command.find("L") == 0u) {
                         ClientUtility::udpLikeArticle(fd, serverAddrp);

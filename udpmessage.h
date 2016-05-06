@@ -4,7 +4,8 @@
 #include <string>
 
 const std::string msgOptWELCOME = "[L]Login  [R]Register  [Q]Quit\n";
-const std::string msgOptARTICLE = std::string("[C]Comment [UC]Uncomment [L]Like [UL]Unlike\n") +
+const std::string msgOptARTICLE = std::string("[L]Like [UL]Unlike\n") +
+                                  std::string("[C]Comment [EC]Edit Last Comment [DC]Delete Last Comment\n") +
                                   std::string("[E]Edit Article [D]Delete Article [Q]Quit\n");
 const std::string msgOptEDITARTICLE = "[P]Change Permission [T]Change Title [C]Change content [Q]Quit\n";
 const std::string msgOptMAIN = std::string("[SP]Show Profile [SE]Set Profile\n") +
@@ -26,6 +27,9 @@ const std::string msgSHOWARTICLE = "SHOWARTICLE";
 const std::string msgENTERARTICLE = "ENTERARTICLE";
 const std::string msgLIKEARTICLE = "LIKEARTICLE";
 const std::string msgUNLIKEARTICLE = "UNLIKEARTICLE";
+const std::string msgCOMMENTARTICLE = "COMMENTARTICLE";
+const std::string msgEDITCOMMENTARTICLE = "EDITCOMMENTARTICLE";
+const std::string msgDELETECOMMENTARTICLE = "DELETECOMMENTARTICLE";
 const std::string msgCHECKARTICLEPERMISSION = "CHECKARTICLEPERMISSION";
 
 const std::string msgSUCCESS = "Success!\n";

@@ -218,7 +218,7 @@ class ServerUtility {
             int config;
             sscanf(msg.c_str(), "%*s%d", &config);
             if (config == 0) {
-                std::istringstream iss(msg.c_str() + 12);
+                std::istringstream iss(msg.c_str() + msgADDARTICLE.length() + 3);
                 int viewType;
                 iss >> account >> viewType;
                 int index = articles.getIndex();
@@ -251,8 +251,8 @@ class ServerUtility {
             else if (config == 1) {
                 int index;
                 unsigned pos;
-                sscanf(msg.c_str() + 12, "%d", &index);
-                pos = msg.find(std::to_string(index), 12);
+                sscanf(msg.c_str() + msgADDARTICLE.length() + 3, "%d", &index);
+                pos = msg.find(std::to_string(index), msgADDARTICLE.length() + 3);
                 pos += (std::to_string(index).length() + 1);
                 std::string title;
                 if (pos < msg.length()) {
@@ -269,8 +269,8 @@ class ServerUtility {
             else if (config == 2) {
                 int index;
                 unsigned pos;
-                sscanf(msg.c_str() + 12, "%d", &index);
-                pos = msg.find(std::to_string(index), 12);
+                sscanf(msg.c_str() + msgADDARTICLE.length() + 3, "%d", &index);
+                pos = msg.find(std::to_string(index), msgADDARTICLE.length() + 3);
                 pos += (std::to_string(index).length() + 1);
                 std::string content;
                 if (pos < msg.length()) {
@@ -294,7 +294,7 @@ class ServerUtility {
             // server return result
             int config, index, offset;
             sscanf(msg.c_str(), "%*s%d%d", &config, &index);
-            offset = 14;
+            offset = msgEDITARTICLE.length() + 3;
             offset += (std::to_string(index).length() + 1);
             if (config == 0) {
                 std::istringstream iss(msg.c_str() + offset);
@@ -326,6 +326,7 @@ class ServerUtility {
                 std::string content = msg.substr(offset);
                 articles.getArticle(index).content = content;
             }
+            articles.getArticle(index).timeStamp = time(NULL);
             std::string toSend = "Edit Success!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
@@ -336,7 +337,8 @@ class ServerUtility {
             int index;
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
             std::string toSend;
-            if (articles.getArticle(index).author != account) {
+            if (articles.getArticle(index).author != account ||
+                articles.getAllArticles().count(index) < 1) {
                 toSend = msgPERMISSIONDENIED;
             }
             else {
@@ -394,12 +396,12 @@ class ServerUtility {
             toSend += "   By: " + articles.getArticle(index).author + "\n";
             toSend += " From: " + articles.getArticle(index).source + "\n";
             toSend += "   At: " + timeString + "\n";
-            toSend += articles.getArticle(index).content + "\n";
+            toSend += articles.getArticle(index).content + "\n\n";
             toSend += "Like:\n";
             for (const auto& who : articles.getArticle(index).liker) {
                 toSend += who.first + " ";
             }
-            toSend += "\n";
+            toSend += "\n\n";
             toSend += "Comment:\n";
             for (const auto& comment : articles.getArticle(index).comment) {
                 toSend += comment + "\n";
@@ -439,6 +441,98 @@ class ServerUtility {
             articles.getArticle(index).liker.erase(account);
             std::string toSend = "Unlike Successfully\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
+        static void udpCommentArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: COMMENTARTICLE account index message
+            char account[MAXN];
+            int index;
+            unsigned offset = 0;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            if (articles.getAllArticles().count(index) < 1) {
+                std::string toS = msgARTICLENOTFOUND;
+                udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            offset += msgCOMMENTARTICLE.length() + 1;
+            offset += (strlen(account) + 1);
+            offset += (std::to_string(index).length() + 1);
+            std::string comment;
+            if (offset < msg.length()) {
+                comment = msg.substr(offset);
+            }
+            else {
+                comment = "";
+            }
+            std::string toAdd = std::string(account) + ": " + comment;
+            articles.getArticle(index).comment.push_back(toAdd);
+            std::string toSend = "Comment Successful!\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
+        static void udpEditCommentArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: EDITCOMMENTARTICLE account index message
+            char account[MAXN];
+            int index;
+            unsigned offset = 0;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            if (articles.getAllArticles().count(index) < 1) {
+                std::string toS = msgARTICLENOTFOUND;
+                udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            offset += msgEDITCOMMENTARTICLE.length() + 1;
+            offset += (strlen(account) + 1);
+            offset += (std::to_string(index).length() + 1);
+            std::string comment;
+            if (offset < msg.length()) {
+                comment = msg.substr(offset);
+            }
+            else {
+                comment = "";
+            }
+            std::string toAdd = std::string(account) + ": " + comment;
+            for (auto it = articles.getArticle(index).comment.rbegin();
+                 it != articles.getArticle(index).comment.rend();
+                 ++it) {
+                if (it->find(std::string(account) + ": ") == 0u) {
+                    *it = toAdd;
+                    std::string toSend = "Comment Successful!\n";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+            }
+            std::string toError = "You didn\'t comment before!\n";
+            udp.udpSend(fd, clientAddrp, toError.c_str(), toError.length());
+        }
+
+        static void udpDeleteCommentArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            int index;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            if (articles.getAllArticles().count(index) < 1) {
+                std::string toS = msgARTICLENOTFOUND;
+                udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            int pos = -1;
+            for (int i = 0; i < static_cast<int>(articles.getArticle(index).comment.size()); ++i) {
+                const std::string& comment = articles.getArticle(index).comment.at(i);
+                if (comment.find(std::string(account) + ": ") == 0u) {
+                    pos = i;
+                }
+            }
+            if (pos != -1) {
+                articles.getArticle(index).comment.erase(
+                        articles.getArticle(index).comment.begin() + pos
+                );
+                std::string toSend = "Delete Comment Successfully!\n";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+            }
+            else {
+                std::string toError = "You didn\'t comment before!\n";
+                udp.udpSend(fd, clientAddrp, toError.c_str(), toError.length());
+            }
         }
 
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
@@ -600,6 +694,15 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgUNLIKEARTICLE) == 0u) {
                 ServerUtility::udpUnlikeArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgCOMMENTARTICLE) == 0u) {
+                ServerUtility::udpCommentArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgEDITCOMMENTARTICLE) == 0u) {
+                ServerUtility::udpEditCommentArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgDELETECOMMENTARTICLE) == 0u) {
+                ServerUtility::udpDeleteCommentArticle(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);
