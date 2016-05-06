@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <map>
+#include <deque>
 #include <vector>
 #include <utility>
 #include "global.h"
@@ -24,6 +25,7 @@ class UserData {
             password = "";
             name = "";
             birthday = "";
+            friendRequest.clear();
             friends.clear();
             registerDate = time(NULL);
             lastLogin = time(NULL);
@@ -38,6 +40,7 @@ class UserData {
         std::string password;
         std::string name;
         std::string birthday;
+        std::deque<std::string> friendRequest;
         std::map<std::string, bool> friends;
         time_t registerDate;
         time_t lastLogin;
@@ -535,6 +538,52 @@ class ServerUtility {
             }
         }
 
+        static void udpSearchUser(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: SEARCHUSER type keyword
+            int type;
+            unsigned pos = 0;
+            sscanf(msg.c_str(), "%*s%d", &type);
+            pos += msgSEARCHUSER.length() + 3;
+            std::string keyword;
+            if (pos < msg.length()) {
+                keyword = msg.substr(pos);
+            }
+            else {
+                keyword = "";
+            }
+            std::string toSend = "Search Result(Account / Name):\n";
+            if (type == 1) {
+                for (const auto& who : serverData) {
+                    if (who.first == keyword) {
+                        toSend += who.first + " / " + who.second.name + "\n";
+                    }
+                }
+            }
+            else {
+                for (const auto& who : serverData) {
+                    if (who.second.name == keyword) {
+                        toSend += who.first + " / " + who.second.name + "\n";
+                    }
+                }
+            }
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
+        static void udpSendFriendRequest(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format SENDFRIENDREQUEST src dst
+            char source[MAXN];
+            char target[MAXN];
+            sscanf(msg.c_str(), "%*s%s%s", source, target);
+            if (serverData.count(target) < 1) {
+                std::string toSend = msgUSERNOTFOUND;
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            serverData[target].friendRequest.push_back(source);
+            std::string result = "Friend Request Sent!\n";
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             int index;
@@ -703,6 +752,12 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgDELETECOMMENTARTICLE) == 0u) {
                 ServerUtility::udpDeleteCommentArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgSEARCHUSER) == 0u) {
+                ServerUtility::udpSearchUser(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgSENDFRIENDREQUEST) == 0u) {
+                ServerUtility::udpSendFriendRequest(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);

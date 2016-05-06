@@ -467,6 +467,51 @@ class ClientUtility {
             printf("\n%s\n", buffer);
         }
 
+        static void udpSearchUser(const int& fd, sockaddr*& serverAddrp) {
+            char buffer[MAXN];
+            int type;
+            printf("Search By [1]Account [2]Name: ");
+            while (fgets(buffer, MAXN, stdin)) {
+                if (sscanf(buffer, "%d", &type) == 1 && type >= 1 && type <= 2) {
+                    break;
+                }
+                else {
+                    printf("Search By [1]Account [2]Name: ");
+                }
+            }
+            printf("Keyword: ");
+            if (fgets(buffer, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(buffer);
+            std::string msg = msgSEARCHUSER + " " + std::to_string(type) + " " + buffer;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            nowStage = NPStage::SEARCH;
+        }
+
+        static void udpSendFriendRequest(const int& fd, sockaddr*& serverAddrp) {
+            // format: SENDFRIENDREQUEST account targetaccount
+            char target[MAXN];
+            char buffer[MAXN];
+            printf("Account to send friend request: ");
+            if (fgets(target, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(target);
+            if (std::string(target) == nowAccount) {
+                fprintf(stderr, "Can\'t send friend request to yourself\n");
+                return;
+            }
+            std::string msg = msgSENDFRIENDREQUEST + " " + nowAccount + " " + target;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+        }
+
     private:
         static bool isValidString(const std::string& str) {
             for (char c : str) {
@@ -594,6 +639,12 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else if (command.find("E") == 0u) {
                         ClientUtility::udpEnterArticle(fd, serverAddrp);
                     }
+                    else if (command.find("S") == 0u) {
+                        ClientUtility::udpSearchUser(fd, serverAddrp);
+                    }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
                     break;
                 case 3: // article
                     if (command.find("Q") == 0u) {
@@ -621,6 +672,22 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else if (command.find("D") == 0u) {
                         ClientUtility::udpDeleteArticle(fd, serverAddrp);
                     }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
+                    break;
+                case 4: // search
+                    if (command.find("Q") == 0u) {
+                        nowStage = NPStage::MAIN;
+                    }
+                    else if (command.find("S") == 0u) {
+                        ClientUtility::udpSendFriendRequest(fd, serverAddrp);
+                    }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
+                default:
+                    break;
             }
             printMessage(nowStage);
         }
@@ -639,6 +706,9 @@ void printMessage(const NPStage& stage) {
             break;
         case 3: // article
             printf("%s~ ", msgOptARTICLE.c_str());
+            break;
+        case 4: // search
+            printf("%s~ ", msgOptSEARCH.c_str());
             break;
     }
     fflush(stdout);

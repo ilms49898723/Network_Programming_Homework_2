@@ -20,7 +20,7 @@
 constexpr int MAXN = 2048;
 
 enum class NPStage {
-    INIT, WELCOME, MAIN, ARTICLE
+    INIT, WELCOME, MAIN, ARTICLE, SEARCH
 };
 
 enum class NPArticlePermission {
