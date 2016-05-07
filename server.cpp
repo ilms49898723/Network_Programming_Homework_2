@@ -677,6 +677,26 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
+        static void udpGetChatUsers(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            std::string toSend = "Online Users\n";
+            std::string isFriend = "";
+            std::string notFriend = "";
+            for (const auto& who : serverData) {
+                if (who.second.isOnline) {
+                    if (serverData[who.first].friends.count(account) > 0) {
+                        isFriend += who.first + " [Online] [Friends]\n";
+                    }
+                    else {
+                        notFriend += who.first + " [Online]\n";
+                    }
+                }
+            }
+            toSend = toSend + isFriend + notFriend + "\n";
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             int index;
@@ -1069,6 +1089,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgREJECTFRIENDREQUEST) == 0u) {
                 ServerUtility::udpRejectFriendRequest(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgGETCHATUSERS) == 0u) {
+                ServerUtility::udpGetChatUsers(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);

@@ -5,13 +5,15 @@
 
 const std::string msgOptWELCOME = "[L]Login  [R]Register  [Q]Quit\n";
 const std::string msgOptMAIN = std::string("[SP]Show Profile   [SE]Set Profile\n") +
-                               std::string("[SA]Show Article   [A]Add Article     [E]Enter Article\n") +
-                               std::string("[F]Friends         [C]Chat            [S]Search User\n") +
+                               std::string("[SA]Show Article   [A]Add Article   [E]Enter Article\n") +
+                               std::string("[F]Friends         [C]Chat          [S]Search User\n") +
                                std::string("[U]Upload File     [D]Download File\n") +
                                std::string("[DA]Delete Account [L]Logout\n");
 const std::string msgOptARTICLE = std::string("[L]Like            [UL]Unlike\n") +
                                   std::string("[C]Comment         [EC]Edit Last Comment  [DC]Delete Last Comment\n") +
                                   std::string("[E]Edit Article    [D]Delete Article      [Q]Quit\n");
+const std::string msgOptCHAT = std::string("[T]Talk to someone  [L]List All Chatting Group  [Q]Quit\n");
+const std::string msgOptCHATGROUP = std::string("[C]Create Group  [E]Enter Group  [Q]Quit\n");
 const std::string msgOptEDITARTICLE = "[P]Change Permission [T]Change Title [C]Change content [Q]Quit\n";
 const std::string msgOptSEARCH = std::string("[S]Send Friend Request  [Q]Quit\n");
 const std::string msgOptFRIENDS = std::string("[A]Accept Request  [R]Reject Request  [Q]Quit\n");
@@ -39,6 +41,8 @@ const std::string msgSENDFRIENDREQUEST = "SENDFRIENDREQUEST";
 const std::string msgSHOWFRIENDS = "SHOWFRIENDS";
 const std::string msgACCEPTFRIENDREQUEST = "ACCEPTFRIENDREQUEST";
 const std::string msgREJECTFRIENDREQUEST = "REJECTFRIENDREQUEST";
+
+const std::string msgGETCHATUSERS = "GETCHATUSERS";
 
 const std::string msgFILENEW = "FILENEW";
 const std::string msgFILESEQ = "FILESEQ";

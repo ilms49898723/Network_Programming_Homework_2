@@ -25,13 +25,13 @@ class ClientUtility {
             }
             trimNewLine(account);
             if (!isValidString(account)) {
-                fprintf(stderr, "Account may not contain space or tab character\n");
+                fprintf(stderr, "Account may not contain space or tab character\n\n");
                 return;
             }
             strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
-                fprintf(stderr, "Password may not contain space or tab character\n");
+                fprintf(stderr, "Password may not contain space or tab character\n\n");
                 return;
             }
             std::string msg = msgREGISTER + " " + account + " " + password;
@@ -51,13 +51,13 @@ class ClientUtility {
             }
             trimNewLine(account);
             if (!isValidString(account)) {
-                fprintf(stderr, "Account may not contain space or tab character\n");
+                fprintf(stderr, "Account may not contain space or tab character\n\n");
                 return;
             }
             strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
-                fprintf(stderr, "Password may not contain space or tab character\n");
+                fprintf(stderr, "Password may not contain space or tab character\n\n");
                 return;
             }
             std::string msg = msgLOGIN + " " + account + " " + password;
@@ -512,7 +512,7 @@ class ClientUtility {
             }
             trimNewLine(target);
             if (std::string(target) == nowAccount) {
-                fprintf(stderr, "Can\'t send friend request to yourself\n");
+                fprintf(stderr, "Can\'t send friend request to yourself\n\n");
                 return;
             }
             std::string msg = msgSENDFRIENDREQUEST + " " + nowAccount + " " + target;
@@ -560,6 +560,16 @@ class ClientUtility {
                 return;
             }
             printf("\n%s\n", buffer);
+        }
+
+        static void udpGetChatUsers(const int& fd, sockaddr*& serverAddrp) {
+            std::string msg = msgGETCHATUSERS + " " + nowAccount;
+            char buffer[MAXN];
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\n%s\n", buffer);
+            nowStage = NPStage::CHAT;
         }
 
         static void udpUploadFile(const int& fd, sockaddr*& serverAddrp) {
@@ -817,6 +827,12 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
             }
             trimNewLine(buffer);
             std::string command = buffer;
+            if (command == "LQ") {
+                if (nowAccount != "") {
+                    ClientUtility::udpLogout(fd, serverAddrp);
+                }
+                return;
+            }
             switch (static_cast<int>(nowStage)) {
                 case 0: // init
                     fprintf(stderr, "Invalid Command\n");
@@ -863,6 +879,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else if (command.find("S") == 0u) {
                         ClientUtility::udpSearchUser(fd, serverAddrp);
                     }
+                    else if (command.find("C") == 0u) {
+                        ClientUtility::udpGetChatUsers(fd, serverAddrp);
+                    }
                     else if (command.find("U") == 0u) {
                         ClientUtility::udpUploadFile(fd, serverAddrp);
                     }
@@ -877,6 +896,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     if (command.find("Q") == 0u) {
                         nowArticleIndex = -1;
                         nowStage =NPStage::MAIN;
+                        printf("\n");
                     }
                     else if (command.find("C") == 0u) {
                         ClientUtility::udpCommentArticle(fd, serverAddrp);
@@ -906,6 +926,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 case 4: // search
                     if (command.find("Q") == 0u) {
                         nowStage = NPStage::MAIN;
+                        printf("\n");
                     }
                     else if (command.find("S") == 0u) {
                         ClientUtility::udpSendFriendRequest(fd, serverAddrp);
@@ -917,12 +938,31 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 case 5: // friends
                     if (command.find("Q") == 0u) {
                         nowStage = NPStage::MAIN;
+                        printf("\n");
                     }
                     else if (command.find("A") == 0u) {
                         ClientUtility::udpAcceptFrientRequest(fd, serverAddrp);
                     }
                     else if (command.find("R") == 0u) {
                         ClientUtility::udpRejectFriendRequest(fd, serverAddrp);
+                    }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
+                    break;
+                case 6: // chat
+                    if (command.find("Q") == 0u) {
+                        nowStage = NPStage::MAIN;
+                        printf("\n");
+                    }
+                    else {
+                        fprintf(stderr, "Invalid Command\n");
+                    }
+                    break;
+                case 7: // char group
+                    if (command.find("Q") == 0u) {
+                        nowStage = NPStage::CHAT;
+                        printf("\n");
                     }
                     else {
                         fprintf(stderr, "Invalid Command\n");
@@ -941,19 +981,27 @@ void printMessage(const NPStage& stage) {
         case 0: // init
             break;
         case 1: // welcome
-            printf("%s~ ", msgOptWELCOME.c_str());
+            printf("%s$ ", msgOptWELCOME.c_str());
             break;
         case 2: // main
-            printf("%s~ ", msgOptMAIN.c_str());
+            printf("%s%s:$ ", msgOptMAIN.c_str(), nowAccount.c_str());
             break;
         case 3: // article
-            printf("%s~ ", msgOptARTICLE.c_str());
+            printf("%s%s:$ ", msgOptARTICLE.c_str(), nowAccount.c_str());
             break;
         case 4: // search
-            printf("%s~ ", msgOptSEARCH.c_str());
+            printf("%s%s:$ ", msgOptSEARCH.c_str(), nowAccount.c_str());
             break;
         case 5: // friends
-            printf("%s~ ", msgOptFRIENDS.c_str());
+            printf("%s%s:$ ", msgOptFRIENDS.c_str(), nowAccount.c_str());
+            break;
+        case 6: // chat
+            printf("%s%s:$ ", msgOptCHAT.c_str(), nowAccount.c_str());
+            break;
+        case 7: // chat Group
+            printf("%s%s:$ ", msgOptCHATGROUP.c_str(), nowAccount.c_str());
+            break;
+        default:
             break;
     }
     fflush(stdout);
