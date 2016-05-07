@@ -46,6 +46,22 @@ class UserData {
         time_t lastLogin;
 };
 
+// message buffer
+// store account(from) -> deque(message list)
+class MessageBuffer {
+    public:
+        MessageBuffer() {
+            msgBuffer.clear();
+        }
+
+        virtual ~MessageBuffer() {
+
+        }
+
+    public:
+        std::map<std::string, std::deque<std::string>> msgBuffer;
+};
+
 // store article
 class ArticleData {
     public:
@@ -118,8 +134,10 @@ class Articles {
         std::map<int, ArticleData> articles;
 };
 
-// map for Account --> UserData
+// map for account --> userData
 std::map<std::string, UserData> serverData;
+// map for Account --> messageBuffer
+std::map<std::string, MessageBuffer> messageData;
 // articles
 Articles articles;
 
@@ -185,6 +203,7 @@ class ServerUtility {
             for (auto user : serverData) {
                 user.second.friends.erase(account);
                 user.second.friendRequest.erase(account);
+                messageData.erase(account);
             }
             printf("Account %s has been deleted!\n", account);
             std::string toSend = "Delete Successfully!\n";
@@ -697,6 +716,67 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
+        static void udpEnterChat(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: ENTERCHAT individial/group source target
+            char account[MAXN];
+            char target[MAXN];
+            char config[MAXN];
+            sscanf(msg.c_str(), "%*s%s%s%s", config, account, target);
+            udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
+        }
+
+        static void udpLeaveChat(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            sscanf(msg.c_str(), "%s", account);
+            udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
+        }
+
+        static void udpFlushChat(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: FLUSHCHAT individual/group source target
+            char account[MAXN];
+            char target[MAXN];
+            char config[MAXN];
+            sscanf(msg.c_str(), "%*s%s%s%s", config, account, target);
+            if (messageData.count(account) < 1 || messageData[account].msgBuffer.count(target) < 1) {
+                std::string toSend = "";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+            }
+            if (std::string(config) == msgCHATINDIVIDUAL) {
+                std::string toSend = "";
+                for (const auto& item : messageData[account].msgBuffer[target]) {
+                    toSend += item + "\n";
+                }
+                messageData[account].msgBuffer[target].clear();
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+            }
+        }
+
+        static void udpMessage(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: MESSAGE type source target message
+            char account[MAXN];
+            char target[MAXN];
+            char config[MAXN];
+            unsigned offset;
+            std::string content;
+            sscanf(msg.c_str(), "%*s%s%s%s", config, account, target);
+            offset = msgMESSAGE.length() + 1 +
+                     strlen(config) + 1 +
+                     strlen(account) + 1 +
+                     strlen(target) + 1;
+            content = std::string(account) + ": ";
+            if (offset < msg.length()) {
+                content += msg.substr(offset);
+            }
+            else {
+                content += "";
+            }
+            if (std::string(config) == msgCHATINDIVIDUAL) {
+                messageData[target].msgBuffer[account].push_back(content);
+                udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
+            }
+            // TODO: group chat
+        }
+
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             int index;
@@ -1092,6 +1172,18 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgGETCHATUSERS) == 0u) {
                 ServerUtility::udpGetChatUsers(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgENTERCHAT) == 0u) {
+                ServerUtility::udpEnterChat(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgLEAVECHAT) == 0u) {
+                ServerUtility::udpLeaveChat(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgFLUSHCHAT) == 0u) {
+                ServerUtility::udpFlushChat(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgMESSAGE) == 0u) {
+                ServerUtility::udpMessage(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);

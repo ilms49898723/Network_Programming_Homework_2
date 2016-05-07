@@ -573,6 +573,64 @@ class ClientUtility {
             nowStage = NPStage::CHAT;
         }
 
+        static void udpChatIndividually(const int& fd, sockaddr*& serverAddrp) {
+            // format: MESSAGE type source target message
+            char target[MAXN];
+            std::string targetAcc;
+            printf("Account to Chat: ");
+            if (fgets(target, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(target);
+            targetAcc = target;
+            char buffer[MAXN];
+            char input[MAXN];
+            std::string msg = msgENTERCHAT + " " + msgCHATINDIVIDUAL + " " + nowAccount + " " + targetAcc;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("Press ^D to exit\n");
+            msg = msgFLUSHCHAT + " " + msgCHATINDIVIDUAL + " " + nowAccount + " " + targetAcc;
+            fd_set fdset;
+            FD_ZERO(&fdset);
+            while (true) {
+                FD_SET(fileno(stdin), &fdset);
+                timeval tv;
+                tv.tv_sec = 0;
+                tv.tv_usec = 500;
+                int nready = select(fileno(stdin) + 1, &fdset, NULL, NULL, &tv);
+                if (nready < 0) {
+                    if (errno == EINTR) {
+                        continue;
+                    }
+                    else {
+                        fprintf(stderr, "select: %s\n", strerror(errno));
+                        break;
+                    }
+                }
+                if (FD_ISSET(fileno(stdin), &fdset)) {
+                    if (fgets(input, MAXN, stdin) == NULL) {
+                        break;
+                    }
+                    trimNewLine(input);
+                    std::string toSend = msgMESSAGE + " " + msgCHATINDIVIDUAL + " " +
+                                         nowAccount + " " + targetAcc + " " + input;
+                    if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, toSend.c_str(), toSend.length()) < 0) {
+                        break;
+                    }
+                }
+                if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                    break;
+                }
+                std::string content = buffer;
+                if (content.length() > 0) {
+                    printf("%s", content.c_str());
+                }
+            }
+            printf("\nExited!\n");
+            udpGetChatUsers(fd, serverAddrp);
+        }
+
         static void udpUploadFile(const int& fd, sockaddr*& serverAddrp) {
             // file transfer:
             // start: FILENEW filename
@@ -955,6 +1013,12 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     if (command.find("Q") == 0u) {
                         nowStage = NPStage::MAIN;
                         printf("\n");
+                    }
+                    else if (command.find("T") == 0u) {
+                        ClientUtility::udpChatIndividually(fd, serverAddrp);
+                    }
+                    else if (command.find("L") == 0u) {
+
                     }
                     else {
                         fprintf(stderr, "Invalid Command\n");
