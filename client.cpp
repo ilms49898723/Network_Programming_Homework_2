@@ -981,25 +981,25 @@ void printMessage(const NPStage& stage) {
         case 0: // init
             break;
         case 1: // welcome
-            printf("%s$ ", msgOptWELCOME.c_str());
+            printf("%s~ ", msgOptWELCOME.c_str());
             break;
         case 2: // main
-            printf("%s%s:$ ", msgOptMAIN.c_str(), nowAccount.c_str());
+            printf("%s%s:~ ", msgOptMAIN.c_str(), nowAccount.c_str());
             break;
         case 3: // article
-            printf("%s%s:$ ", msgOptARTICLE.c_str(), nowAccount.c_str());
+            printf("%s%s:~ ", msgOptARTICLE.c_str(), nowAccount.c_str());
             break;
         case 4: // search
-            printf("%s%s:$ ", msgOptSEARCH.c_str(), nowAccount.c_str());
+            printf("%s%s:~ ", msgOptSEARCH.c_str(), nowAccount.c_str());
             break;
         case 5: // friends
-            printf("%s%s:$ ", msgOptFRIENDS.c_str(), nowAccount.c_str());
+            printf("%s%s:~ ", msgOptFRIENDS.c_str(), nowAccount.c_str());
             break;
         case 6: // chat
-            printf("%s%s:$ ", msgOptCHAT.c_str(), nowAccount.c_str());
+            printf("%s%s:~ ", msgOptCHAT.c_str(), nowAccount.c_str());
             break;
         case 7: // chat Group
-            printf("%s%s:$ ", msgOptCHATGROUP.c_str(), nowAccount.c_str());
+            printf("%s%s:~ ", msgOptCHATGROUP.c_str(), nowAccount.c_str());
             break;
         default:
             break;
