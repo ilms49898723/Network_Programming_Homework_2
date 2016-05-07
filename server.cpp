@@ -733,10 +733,10 @@ class ServerUtility {
             for (const auto& who : serverData) {
                 if (who.second.isOnline) {
                     if (serverData[who.first].friends.count(account) > 0) {
-                        isFriend += who.first + " [Online] [Friends]\n";
+                        isFriend += std::string("    ") + who.first + " [Online] [Friends]\n";
                     }
                     else {
-                        notFriend += who.first + " [Online]\n";
+                        notFriend += std::string("    ") + who.first + " [Online]\n";
                     }
                 }
             }
@@ -752,6 +752,7 @@ class ServerUtility {
             for (const auto& item : groupData) {
                 toSend += std::string("    ") + item.first + "\n";
             }
+            toSend += "\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
