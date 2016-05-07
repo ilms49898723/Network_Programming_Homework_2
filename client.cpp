@@ -166,7 +166,8 @@ class ClientUtility {
                 }
                 else if (std::string(buffer) == "4") {
                     msg = msg + " " + buffer;
-                    printf("Please enter account(one per line) who can view this article\nPress ^D to finish\n");
+                    printf("Please enter accounts(one per line) who can view this article\n");
+                    printf("Press ^D to finish\n");
                     char viewAccount[MAXN];
                     while (fgets(viewAccount, MAXN, stdin) != NULL) {
                         msg = msg + " " + viewAccount;
