@@ -675,6 +675,8 @@ class ClientUtility {
             targetAcc = target;
             char buffer[MAXN];
             char input[MAXN];
+            printf("Type \"/upload <file>\" to Upload File\n");
+            printf("Type \"/download <file>\" to Download File\n");
             printf("Press ^D to exit\n");
             std::string msg = msgFLUSHCHAT + " " + msgCHATINDIVIDUAL + " " + nowAccount + " " + targetAcc;
             fd_set fdset;
@@ -699,6 +701,41 @@ class ClientUtility {
                         break;
                     }
                     trimNewLine(input);
+                    if (input[0] == '/') {
+                        if (std::string(input).find("/upload") != 0u &&
+                            std::string(input).find("/download") != 0u) {
+                            continue;
+                        }
+                        char filename[MAXN];
+                        processArgument(filename, input);
+                        if (strlen(filename) == 0) {
+                            continue;
+                        }
+                        bool flag = false;
+                        if (std::string(input).find("/upload") == 0u) {
+                            udpUploadFile(fd, serverAddrp, filename, flag);
+                            if (flag) {
+                                std::string upr = msgMESSAGE + " " + msgCHATINDIVIDUAL + " " +
+                                                  nowAccount + " " + targetAcc + " " +
+                                                  nowAccount + " uploaded " + filename;
+                                if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, upr.c_str(), upr.length()) < 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        if (std::string(input).find("/download") == 0u) {
+                            udpDownloadFile(fd, serverAddrp, filename,  flag);
+                            if (flag) {
+                                std::string dlr = msgMESSAGE + " " + msgCHATINDIVIDUAL + " " +
+                                                  nowAccount + " " + targetAcc + " " +
+                                                  nowAccount + " downloaded " + filename;
+                                if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, dlr.c_str(), dlr.length()) < 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        continue;
+                    }
                     std::string toSend = msgMESSAGE + " " + msgCHATINDIVIDUAL + " " +
                                          nowAccount + " " + targetAcc + " " + input;
                     if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, toSend.c_str(), toSend.length()) < 0) {
@@ -756,6 +793,8 @@ class ClientUtility {
                 return;
             }
             printf("%s\n", buffer);
+            printf("Type \"/upload\" to Upload File\n");
+            printf("Type \"/download\" to Download File\n");
             printf("Press ^D to exit\n");
             msg = msgFLUSHCHAT + " " + msgCHATGROUP + " " + nowAccount + " " + groupname;
             fd_set fdset;
@@ -780,6 +819,41 @@ class ClientUtility {
                         break;
                     }
                     trimNewLine(input);
+                    if (input[0] == '/') {
+                        if (std::string(input).find("/upload") != 0u &&
+                            std::string(input).find("/download") != 0u) {
+                            continue;
+                        }
+                        char filename[MAXN];
+                        processArgument(filename, input);
+                        if (strlen(filename) == 0) {
+                            continue;
+                        }
+                        bool flag = false;
+                        if (std::string(input).find("/upload") == 0u) {
+                            udpUploadFile(fd, serverAddrp, filename, flag);
+                            if (flag) {
+                                std::string upr = msgMESSAGE + " " + msgCHATGROUP + " " +
+                                                  nowAccount + " " + groupname + " " +
+                                                  nowAccount + " uploaded " + filename;
+                                if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, upr.c_str(), upr.length()) < 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        if (std::string(input).find("/download") == 0u) {
+                            udpDownloadFile(fd, serverAddrp, filename,  flag);
+                            if (flag) {
+                                std::string dlr = msgMESSAGE + " " + msgCHATGROUP + " " +
+                                                  nowAccount + " " + groupname + " " +
+                                                  nowAccount + " downloaded " + filename;
+                                if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, dlr.c_str(), dlr.length()) < 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        continue;
+                    }
                     std::string toSend = msgMESSAGE + " " + msgCHATGROUP + " " +
                                          nowAccount + " " + groupname + " " + input;
                     if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, toSend.c_str(), toSend.length()) < 0) {
@@ -794,9 +868,15 @@ class ClientUtility {
                     printf("%s", content.c_str());
                 }
             }
+            msg = msgLEAVECHATGROUP + " " + nowAccount;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            printf("\nExited!\n");
+            udpListChatGroup(fd, serverAddrp);
         }
 
-        static void udpUploadFile(const int& fd, sockaddr*& serverAddrp) {
+        static void udpUploadFile(const int& fd, sockaddr*& serverAddrp, const std::string& argu, bool& flag) {
             // file transfer:
             // start: FILENEW filename
             // server return SUCCESS!
@@ -804,44 +884,36 @@ class ClientUtility {
             // server return n
             // end: FILEEND filename filesize
             // server return check result
+            flag = false;
             char filenameCStr[MAXN];
             char buffer[MAXN];
             char recv[MAXN];
             std::string filename, localFilename;
-            printf("Filename to Upload: ");
-            if (fgets(filenameCStr, MAXN, stdin) == NULL) {
-                showPrevious();
-                return;
-            }
-            trimNewLine(filenameCStr);
+            snprintf(filenameCStr, MAXN, "%s", argu.c_str());
             filename = filenameCStr;
             localFilename = std::string("Download/") + filenameCStr;
             struct stat fileStat;
             if (stat(localFilename.c_str(), &fileStat) < 0) {
-                std::string errmsg = filename + ": " + strerror(errno);
-                showPrevious(errmsg);
+                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
                 return;
             }
             if (!S_ISREG(fileStat.st_mode)) {
-                std::string errmsg = filename + ": Not a regular file";
-                showPrevious(errmsg);
+                fprintf(stderr, "%s: Not a regular file\n", filename.c_str());
                 return;
             }
             unsigned long fileSize = fileStat.st_size;
             FILE* fp = fopen(localFilename.c_str(), "rb");
             if (!fp) {
-                std::string errmsg = filename + ": " + strerror(errno);
-                showPrevious(errmsg);
+                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
                 return;
             }
             snprintf(buffer, MAXN, "%s %s", msgFILENEW.c_str(), filename.c_str());
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, strlen(buffer)) < 0) {
                 fclose(fp);
-                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(recv) != msgSUCCESS) {
-                showPrevious(recv);
+                fprintf(stderr, "%s\n", recv);
                 fclose(fp);
                 return;
             }
@@ -851,8 +923,7 @@ class ClientUtility {
                 char filecontent[MAXN];
                 n = read(fileno(fp), filecontent, 1500);
                 if (n < 0) {
-                    std::string errmsg = filename + ": " + strerror(errno);
-                    showPrevious(errmsg);
+                    fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
                     fclose(fp);
                     return;
                 }
@@ -864,13 +935,12 @@ class ClientUtility {
                 memcpy(buffer + size + 1, filecontent, n);
                 size += n + 1;
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, size) < 0) {
-                    showPrevious(msgTIMEOUT);
                     fclose(fp);
                     return;
                 }
                 if (std::string(recv).find(msgSUCCESS) != 0u) {
                     std::string errmsg = filename + ": " + recv;
-                    showPrevious(errmsg);
+                    fprintf(stderr, "%s: %s\n", filename.c_str(), recv);
                     fclose(fp);
                     return;
                 }
@@ -879,15 +949,16 @@ class ClientUtility {
             fclose(fp);
             unsigned long long easyHash = fileHash(localFilename.c_str());
             snprintf(buffer, MAXN, "%s %s %lu %llx",
-                    msgFILEEND.c_str(), filename.c_str(), fileSize, easyHash);
+                     msgFILEEND.c_str(), filename.c_str(), fileSize, easyHash);
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, strlen(buffer)) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            showContent("File Uploaded Successfully!\n");
+            printf("File Uploaded Successfully!\n");
+            flag = true;
         }
 
-        static void udpDownloadFile(const int& fd, sockaddr*& serverAddrp) {
+        static void udpDownloadFile(const int& fd, sockaddr*& serverAddrp, const std::string& argu, bool& flag) {
             // format: FILEREQ 0 filename
             // server return SUCCESS fileSize(if success)
             //               FAIL error message(if fail)
@@ -897,46 +968,39 @@ class ClientUtility {
             // format: FILEREQ 2 filename
             // server return SUCCESS hash(if success)
             //               FAIL error message(if failed)
+            flag = false;
             char recv[MAXN];
             char filenameCStr[MAXN];
             std::string filename;
             std::string localFilename;
             std::string msg;
-            printf("Filename to Download: ");
-            if (fgets(filenameCStr, MAXN, stdin) == NULL) {
-                showPrevious();
-                return;
-            }
-            trimNewLine(filenameCStr);
+            snprintf(filenameCStr, MAXN, "%s", argu.c_str());
             filename = filenameCStr;
             localFilename = std::string("Download/") + filename;
             msg = msgFILEREQ + " 0 " + filename;
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
-                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(recv).find(msgFAIL) == 0u) {
-                showPrevious(recv + msgFAIL.length() + 1);
+                fprintf(stderr, "%s\n", recv + msgFAIL.length() + 1);
                 return;
             }
             unsigned long fileSize;
             sscanf(recv, "%*s%lu", &fileSize);
             FILE* fp = fopen(localFilename.c_str(), "wb");
             if (!fp) {
-                std::string errmsg = filename + ": " + strerror(errno);
-                showPrevious(errmsg);
+                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
                 return;
             }
             unsigned long byteRecv = 0;
             while (byteRecv < fileSize) {
                 msg = msgFILEREQ + " 1 " + filename + " " + std::to_string(byteRecv);
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
-                    showPrevious(msgTIMEOUT);
                     fclose(fp);
                     return;
                 }
                 if (std::string(recv).find(msgFAIL) == 0u) {
-                    showPrevious(recv + msgFAIL.length() + 1);
+                    fprintf(stderr, "%s\n", recv + msgFAIL.length() + 1);
                     fclose(fp);
                     return;
                 }
@@ -945,8 +1009,7 @@ class ClientUtility {
                 sscanf(recv, "%*s%d", &n);
                 offset = msgSUCCESS.length() + 1 + std::to_string(n).length() + 1 + 1;
                 if (write(fileno(fp), recv + offset, n) < 0) {
-                    std::string errmsg = filename + ": " + strerror(errno);
-                    showPrevious(errmsg);
+                    fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
                     fclose(fp);
                     return;
                 }
@@ -955,29 +1018,27 @@ class ClientUtility {
             fclose(fp);
             msg = msgFILEREQ + " 2 " + filename;
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
-                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(msg).find(msgFAIL) == 0u) {
                 showPrevious(msg.c_str() + msgFAIL.length() + 1);
+                fprintf(stderr, "%s\n", msg.c_str() + msgFAIL.length() + 1);
                 return;
             }
             struct stat fileStat;
             if (stat(localFilename.c_str(), &fileStat) < 0) {
-                std::string errmsg = filename + ": " + strerror(errno);
-                showPrevious(errmsg);
+                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
                 return;
             }
             unsigned long long hash;
             sscanf(recv, "%*s%llx", &hash);
             unsigned long long easyHash = fileHash(localFilename.c_str());
             if (easyHash != hash || static_cast<unsigned long>(fileStat.st_size) != fileSize) {
-                showPrevious("Error! FileSize or Hash value is not matched!\n\n");
+                fprintf(stderr, "Error! FileSize or Hash value is not matched!\n\n");
                 return;
             }
-            else {
-                showContent("File Downloaded Successfully!\n");
-            }
+            printf("File Downloaded Successfully!\n");
+            flag = true;
         }
 
     private:
@@ -993,6 +1054,30 @@ class ClientUtility {
                 }
             }
             return false;
+        }
+
+        static void processArgument(char* dst, const char* src) {
+            std::string tmp(src);
+            unsigned offset;
+            if (tmp.find("/upload") == 0u) {
+                offset = strlen("/upload") + 1;
+            }
+            else if (tmp.find("/download") == 0u) {
+                offset = strlen("/download") + 1;
+            }
+            else {
+                dst[0] = '\0';
+                return;
+            }
+            while (offset < tmp.length() && tmp[offset] == ' ') {
+                ++offset;
+            }
+            if (offset < tmp.length()) {
+                strcpy(dst, tmp.substr(offset).c_str());
+            }
+            else {
+                dst[0] = '\0';
+            }
         }
 };
 
@@ -1072,7 +1157,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
             }
             switch (static_cast<int>(nowStage)) {
                 case 0: // init
-                    fprintf(stderr, "Invalid Command\n");
+                    showPrevious("Invalid Command\n");
                     break;
                 case 1: // welcome
                     if (command.find("Q") == 0u) {
@@ -1085,7 +1170,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpRegister(fd, serverAddrp);
                     }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 case 2: // main
@@ -1122,14 +1207,8 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else if (command.find("C") == 0u) {
                         ClientUtility::udpGetChatUsers(fd, serverAddrp);
                     }
-                    else if (command.find("U") == 0u) {
-                        ClientUtility::udpUploadFile(fd, serverAddrp);
-                    }
-                    else if (command.find("D") == 0u) {
-                        ClientUtility::udpDownloadFile(fd, serverAddrp);
-                    }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 case 3: // article
@@ -1160,7 +1239,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpDeleteArticle(fd, serverAddrp);
                     }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 case 4: // search
@@ -1172,7 +1251,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpSendFriendRequest(fd, serverAddrp);
                     }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 case 5: // friends
@@ -1187,7 +1266,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpRejectFriendRequest(fd, serverAddrp);
                     }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 case 6: // chat
@@ -1202,7 +1281,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpListChatGroup(fd, serverAddrp);
                     }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 case 7: // char group
@@ -1216,7 +1295,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                         ClientUtility::udpChatGroup(fd, serverAddrp, "E");
                     }
                     else {
-                        fprintf(stderr, "Invalid Command\n");
+                        showPrevious("Invalid Command\n");
                     }
                     break;
                 default:

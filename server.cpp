@@ -693,7 +693,7 @@ class ServerUtility {
                 return;
             }
             if (serverData[source].friendRequest.count(target) == 0) {
-                std::string toSend = std::string(target) + " doesn\'t send you a friend request\n";
+                std::string toSend = std::string(target) + " didn\'t send you a friend request\n";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
@@ -715,7 +715,7 @@ class ServerUtility {
                 return;
             }
             if (serverData[source].friendRequest.count(target) == 0) {
-                std::string toSend = std::string(target) + " doesn\'t send you a friend request\n";
+                std::string toSend = std::string(target) + " didn\'t send you a friend request\n";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
@@ -727,16 +727,24 @@ class ServerUtility {
         static void udpGetChatUsers(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
-            std::string toSend = "Online Users\n";
+            std::string toSend = "Online Users:\n";
             std::string isFriend = "";
             std::string notFriend = "";
             for (const auto& who : serverData) {
                 if (who.second.isOnline) {
                     if (serverData[who.first].friends.count(account) > 0) {
-                        isFriend += std::string("    ") + who.first + " [Online] [Friends]\n";
+                        isFriend += std::string("    ") + who.first + " [Online] [Friends]";
+                        if (!messageData[account].msgBuffer[who.first].empty()) {
+                            isFriend += " [NEW!]";
+                        }
+                        isFriend += "\n";
                     }
                     else {
-                        notFriend += std::string("    ") + who.first + " [Online]\n";
+                        notFriend += std::string("    ") + who.first + " [Online]";
+                        if (!messageData[account].msgBuffer[who.first].empty()) {
+                            notFriend += " [NEW!]";
+                        }
+                        notFriend += "\n";
                     }
                 }
             }
@@ -750,7 +758,8 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s", account);
             std::string toSend = "Groups:\n";
             for (const auto& item : groupData) {
-                toSend += std::string("    ") + item.first + "\n";
+                toSend += std::string("    ") + item.first + " " +
+                          "(" + std::to_string(item.second.member.size()) + ")" + "\n";
             }
             toSend += "\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
@@ -797,8 +806,17 @@ class ServerUtility {
             // format: LEAVECHATGROUP account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
-            for (auto item : groupData) {
+            for (auto& item : groupData) {
                 item.second.member.erase(account);
+            }
+            std::deque<std::string> emptyGroupName;
+            for (const auto& item : groupData) {
+                if (item.second.member.empty()) {
+                    emptyGroupName.push_back(item.first);
+                }
+            }
+            for (const auto& item : emptyGroupName) {
+                groupData.erase(item);
             }
             udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
         }
@@ -906,7 +924,7 @@ class ServerUtility {
             filename = std::string("Upload/") + std::string(filenameCStr);
             FILE* fp = fopen(filename.c_str(), "wb");
             if (!fp) {
-                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
+                fprintf(stderr, "%s: %s", filename.c_str(), strerror(errno));
                 std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
@@ -936,7 +954,7 @@ class ServerUtility {
                 return;
             }
             if (static_cast<unsigned long>(fileStat.st_size) < offset) {
-                std::string toSend = "Data with offset " + std::to_string(offset) + " is ignored(duplicated)\n";
+                std::string toSend = "Data with offset " + std::to_string(offset) + " is ignored(duplicated)";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }

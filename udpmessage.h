@@ -7,7 +7,7 @@ const std::string msgOptWELCOME = "[L]Login  [R]Register  [Q]Quit\n";
 const std::string msgOptMAIN = std::string("[SP]Show Profile   [SE]Set Profile\n") +
                                std::string("[SA]Show Article   [A]Add Article   [E]Enter Article\n") +
                                std::string("[F]Friends         [C]Chat          [S]Search User\n") +
-                               std::string("[U]Upload File     [D]Download File\n") +
+                               // std::string("[U]Upload File     [D]Download File\n") +
                                std::string("[DA]Delete Account [L/Q]Logout\n");
 const std::string msgOptARTICLE = std::string("[L]Like            [UL]Unlike\n") +
                                   std::string("[C]Comment         [EC]Edit Last Comment  [DC]Delete Last Comment\n") +
