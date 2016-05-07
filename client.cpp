@@ -10,12 +10,15 @@
 NPStage nowStage;
 UDPUtil udp;
 
+std::string previousMsg;
+
 std::string nowAccount;
 int nowArticleIndex;
 
 void clientFunc(const int& fd, sockaddr_in serverAddr);
 void cleanScreen();
 void showContent(const std::string& msg);
+void showPrevious(std::string errmsg = "");
 void printOptions(const NPStage& stage);
 
 class ClientUtility {
@@ -26,23 +29,23 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Account: ");
             if (fgets(account, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(account);
             if (!isValidString(account)) {
-                cleanScreen();
-                fprintf(stderr, "Account may not contain space or tab character\n\n");
+                showPrevious("Account can not contain space or tab character");
                 return;
             }
             strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
-                cleanScreen();
-                fprintf(stderr, "Password may not contain space or tab character\n\n");
+                showPrevious("Password can not contain space or tab character");
                 return;
             }
             std::string msg = msgREGISTER + " " + account + " " + password;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             showContent(buffer);
@@ -54,29 +57,32 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Account: ");
             if (fgets(account, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(account);
             if (!isValidString(account)) {
-                cleanScreen();
-                fprintf(stderr, "Account may not contain space or tab character\n\n");
+                showPrevious("Account can not contain space or tab character");
                 return;
             }
             strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
-                cleanScreen();
-                fprintf(stderr, "Password may not contain space or tab character\n\n");
+                showPrevious("Password can not contain space or tab character");
                 return;
             }
             std::string msg = msgLOGIN + " " + account + " " + password;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            showContent(buffer);
             if (std::string(buffer).find("Login Success!\n\n") != std::string::npos) {
+                showContent(buffer);
                 nowStage = NPStage::MAIN;
                 nowAccount = account;
+            }
+            else {
+                showPrevious(buffer);
             }
         }
 
@@ -84,6 +90,7 @@ class ClientUtility {
             char buffer[MAXN];
             std::string msg = msgLOGOUT + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             showContent(buffer);
@@ -97,14 +104,14 @@ class ClientUtility {
             char buffer[MAXN];
             printf("ARE YOU SURE?(yes/no): ");
             if (fgets(buffer, MAXN, stdin) == NULL) {
-                cleanScreen();
-                printf("CANCELED\n\n");
+                showPrevious("CANCELED");
                 return;
             }
             trimNewLine(buffer);
             if (std::string(buffer) == "yes") {
                 std::string msg = msgDELETEACCOUNT + " " + nowAccount;
                 if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                    showPrevious(msgTIMEOUT);
                     return;
                 }
                 showContent(buffer);
@@ -112,8 +119,7 @@ class ClientUtility {
                 nowAccount = "";
             }
             else {
-                cleanScreen();
-                printf("CANCELED\n\n");
+                showPrevious("CANCELED");
             }
         }
 
@@ -121,9 +127,10 @@ class ClientUtility {
             char buffer[MAXN];
             std::string msg = msgSHOWPROFILE + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpSetProfile(const int& fd, sockaddr*& serverAddrp) {
@@ -131,20 +138,23 @@ class ClientUtility {
             char birthday[MAXN];
             printf("Name: ");
             if (fgets(name, MAXN, stdin) == NULL || !isValidString(name)) {
+                showPrevious("Cannot contain space or tab character");
                 return;
             }
             trimNewLine(name);
             printf("Birthday: ");
             if (fgets(birthday, MAXN, stdin) == NULL || !isValidString(birthday)) {
+                showPrevious("Cannot contain space or tab character");
                 return;
             }
             trimNewLine(birthday);
             char buffer[MAXN];
             std::string msg = msgSETPROFILE + " " + nowAccount + " " + name + " " + birthday;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpAddArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -157,9 +167,12 @@ class ClientUtility {
             std::string msg;
             msg = msgADDARTICLE + " 0 " + nowAccount;
             char buffer[MAXN];
+            cleanScreen();
+            printf("New Article\n");
             printf("Set permission(1:public, 2:author, 3:friend, 4:specific): ");
             while (true) {
                 if (fgets(buffer, MAXN, stdin) == NULL) {
+                    showPrevious();
                     return;
                 }
                 trimNewLine(buffer);
@@ -190,31 +203,35 @@ class ClientUtility {
                 }
             }
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             int articleIndex;
             sscanf(buffer, "%d", &articleIndex);
-            printf("Article Index Number is %d\n", articleIndex);
+            printf("\nArticle Index Number is %d\n\n", articleIndex);
             char title[MAXN];
             printf("Title: ");
             if (fgets(title, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(title);
             msg = msgADDARTICLE + " 1 " + std::to_string(articleIndex) + " " + title;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             msg = msgADDARTICLE + " 2 " + std::to_string(articleIndex) + " ";
             char content[MAXN];
-            printf("Content(press ^D to finish):\n");
+            printf("\nContent(press ^D to finish):\n");
             while (fgets(content, MAXN, stdin) != NULL) {
                 msg = msg + content;
             }
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpEditArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -229,16 +246,18 @@ class ClientUtility {
             int index = nowArticleIndex;
             msg = msgCHECKARTICLEPERMISSION + " " + nowAccount + " " + std::to_string(index);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(buffer) == msgPERMISSIONDENIED) {
-                printf("\n%s\n", buffer);
+                showPrevious(buffer);
                 return;
             }
             while (true) {
                 char command[MAXN];
                 printf("%s~ ", msgOptEDITARTICLE.c_str());
                 if (fgets(command, MAXN, stdin) == NULL) {
+                    showPrevious();
                     break;
                 }
                 trimNewLine(command);
@@ -247,6 +266,7 @@ class ClientUtility {
                     msg = msgEDITARTICLE + " 0 " + std::to_string(index);
                     while (true) {
                         if (fgets(buffer, MAXN, stdin) == NULL) {
+                            showPrevious();
                             return;
                         }
                         trimNewLine(buffer);
@@ -277,23 +297,26 @@ class ClientUtility {
                         }
                     }
                     if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                        showPrevious(msgTIMEOUT);
                         return;
                     }
-                    printf("\n%s\n", buffer);
+                    printf("%s\n", buffer);
                 }
                 else if (std::string(command) == "T") {
                     msg = msgEDITARTICLE + " 1 " + std::to_string(index);
                     char title[MAXN];
                     printf("Title: ");
                     if (fgets(title, MAXN, stdin) == NULL) {
+                        showPrevious();
                         return;
                     }
                     trimNewLine(title);
                     msg = msg + " " + title;
                     if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                        showPrevious(msgTIMEOUT);
                         return;
                     }
-                    printf("\n%s\n", buffer);
+                    printf("%s\n", buffer);
                 }
                 else if (std::string(command) == "C") {
                     msg = msgEDITARTICLE + " 2 " + std::to_string(index) + " ";
@@ -303,34 +326,38 @@ class ClientUtility {
                         msg += content;
                     }
                     if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                        showPrevious(msgTIMEOUT);
                         return;
                     }
-                    printf("\n%s\n", buffer);
+                    printf("%s\n", buffer);
                 }
                 else if (std::string(command) == "Q") {
                     break;
                 }
                 else {
-                    printf("Command not found!\n");
+                    showPrevious("Command not found");
                 }
             }
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(index);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpDeleteArticle(const int& fd, sockaddr*& serverAddrp) {
             std::string msg = msgDELETEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgPERMISSIONDENIED) {
+                showPrevious(buffer);
                 return;
             }
+            showContent(buffer);
             nowArticleIndex = -1;
             nowStage = NPStage::MAIN;
         }
@@ -339,9 +366,10 @@ class ClientUtility {
             std::string msg = msgSHOWARTICLE + " " + nowAccount;
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpEnterArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -350,6 +378,7 @@ class ClientUtility {
             printf("Article Index: ");
             while (true) {
                 if (fgets(buffer, MAXN, stdin) == NULL) {
+                    showPrevious();
                     return;
                 }
                 if (sscanf(buffer, "%d", &index) == 1) {
@@ -358,12 +387,14 @@ class ClientUtility {
             }
             std::string msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(index);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgPERMISSIONDENIED) {
+                showPrevious(buffer);
                 return;
             }
+            showContent(buffer);
             nowArticleIndex = index;
             nowStage = NPStage::ARTICLE;
         }
@@ -372,38 +403,44 @@ class ClientUtility {
             std::string msg = msgLIKEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
+                showPrevious(buffer);
                 nowArticleIndex = -1;
                 nowStage = NPStage::MAIN;
                 return;
             }
+            printf("%s\n", buffer);
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(buffer);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpUnlikeArticle(const int& fd, sockaddr*& serverAddrp) {
             std::string msg = msgUNLIKEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
                 nowArticleIndex = -1;
                 nowStage = NPStage::MAIN;
+                showPrevious(buffer);
                 return;
             }
+            printf("%s\n", buffer);
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpCommentArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -411,25 +448,31 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Comment: ");
             if (fgets(buffer, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(buffer);
             std::string msg = msgCOMMENTARTICLE + " " + nowAccount + " " +
                               std::to_string(nowArticleIndex) + " " + buffer;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
                 nowArticleIndex = -1;
                 nowStage = NPStage::MAIN;
+                showPrevious(buffer);
                 return;
             }
+            std::string commentResult = buffer;
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
+            if (commentResult != msgSUCCESS) {
+                showPrevious(commentResult);
+            }
         }
 
         static void udpEditCommentArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -437,25 +480,32 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Comment: ");
             if (fgets(buffer, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(buffer);
             std::string msg = msgEDITCOMMENTARTICLE + " " + nowAccount + " " +
                               std::to_string(nowArticleIndex) + " " + buffer;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
                 nowArticleIndex = -1;
                 nowStage = NPStage::MAIN;
+                showPrevious(buffer);
                 return;
             }
+            std::string commentResult = buffer;
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
+            if (commentResult != msgSUCCESS) {
+                showPrevious(commentResult);
+            }
         }
 
         static void udpDeleteCommentArticle(const int& fd, sockaddr*& serverAddrp) {
@@ -464,36 +514,47 @@ class ClientUtility {
                               std::to_string(nowArticleIndex);
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             if (std::string(buffer) == msgARTICLENOTFOUND) {
                 nowArticleIndex = -1;
                 nowStage = NPStage::MAIN;
+                showPrevious(buffer);
                 return;
             }
+            std::string commentResult = buffer;
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
+            if (commentResult != msgSUCCESS) {
+                showPrevious(commentResult);
+            }
         }
 
         static void udpShowFriends(const int& fd, sockaddr*& serverAddrp) {
             std::string msg = msgSHOWFRIENDS + " " + nowAccount;
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             nowStage = NPStage::FRIENDS;
+            showContent(buffer);
         }
 
         static void udpSearchUser(const int& fd, sockaddr*& serverAddrp) {
             char buffer[MAXN];
             int type;
             printf("Search By [1]Account [2]Name: ");
-            while (fgets(buffer, MAXN, stdin)) {
+            while (true) {
+                if (fgets(buffer, MAXN, stdin) == NULL) {
+                    showPrevious();
+                    return;
+                }
                 if (sscanf(buffer, "%d", &type) == 1 && type >= 1 && type <= 2) {
                     break;
                 }
@@ -503,15 +564,17 @@ class ClientUtility {
             }
             printf("Keyword: ");
             if (fgets(buffer, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(buffer);
             std::string msg = msgSEARCHUSER + " " + std::to_string(type) + " " + buffer;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             nowStage = NPStage::SEARCH;
+            showContent(buffer);
         }
 
         static void udpSendFriendRequest(const int& fd, sockaddr*& serverAddrp) {
@@ -520,18 +583,20 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Account to send friend request: ");
             if (fgets(target, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(target);
             if (std::string(target) == nowAccount) {
-                fprintf(stderr, "Can\'t send friend request to yourself\n\n");
+                showPrevious("Can\'t send friend request to yourself");
                 return;
             }
             std::string msg = msgSENDFRIENDREQUEST + " " + nowAccount + " " + target;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
         }
 
         static void udpAcceptFrientRequest(const int& fd, sockaddr*& serverAddrp) {
@@ -539,19 +604,25 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Account to accept request: ");
             if (fgets(target, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(target);
             std::string msg = msgACCEPTFRIENDREQUEST + " " + nowAccount + " " + target;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            std::string acceptResult = buffer;
             msg = msgSHOWFRIENDS + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
+            if (acceptResult != msgSUCCESS) {
+                showPrevious(acceptResult);
+            }
         }
 
         static void udpRejectFriendRequest(const int& fd, sockaddr*& serverAddrp) {
@@ -559,29 +630,36 @@ class ClientUtility {
             char buffer[MAXN];
             printf("Account to reject request: ");
             if (fgets(target, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(target);
             std::string msg = msgREJECTFRIENDREQUEST + " " + nowAccount + " " + target;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            std::string acceptResult = buffer;
             msg = msgSHOWFRIENDS + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
+            showContent(buffer);
+            if (acceptResult != msgSUCCESS) {
+                showPrevious(acceptResult);
+            }
         }
 
         static void udpGetChatUsers(const int& fd, sockaddr*& serverAddrp) {
             std::string msg = msgGETCHATUSERS + " " + nowAccount;
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             nowStage = NPStage::CHAT;
+            showContent(buffer);
         }
 
         static void udpChatIndividual(const int& fd, sockaddr*& serverAddrp) {
@@ -590,6 +668,7 @@ class ClientUtility {
             std::string targetAcc;
             printf("Account to Chat: ");
             if (fgets(target, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(target);
@@ -643,10 +722,11 @@ class ClientUtility {
             std::string msg = msgLISTCHATGROUP;
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", buffer);
             nowStage = NPStage::CHATGROUP;
+            showContent(buffer);
         }
 
         static void udpChatGroup(const int& fd, sockaddr*& serverAddrp, const std::string& config) {
@@ -656,6 +736,7 @@ class ClientUtility {
             std::string msg;
             printf("Group Name: ");
             if (fgets(groupname, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(groupname);
@@ -666,10 +747,12 @@ class ClientUtility {
                 msg = msgENTERCHATGROUP + " " + msgEXISTGROUP + " " + nowAccount + " " + groupname;
             }
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(buffer).find(msgFAIL) == 0u) {
-                fprintf(stderr, "%s\n\n", buffer + msgFAIL.length() + 1);
+                std::string errmsg = buffer + msgFAIL.length() + 1;
+                showPrevious(errmsg);
                 return;
             }
             printf("%s\n", buffer);
@@ -727,6 +810,7 @@ class ClientUtility {
             std::string filename, localFilename;
             printf("Filename to Upload: ");
             if (fgets(filenameCStr, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(filenameCStr);
@@ -734,26 +818,30 @@ class ClientUtility {
             localFilename = std::string("Download/") + filenameCStr;
             struct stat fileStat;
             if (stat(localFilename.c_str(), &fileStat) < 0) {
-                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                std::string errmsg = filename + ": " + strerror(errno);
+                showPrevious(errmsg);
                 return;
             }
             if (!S_ISREG(fileStat.st_mode)) {
-                fprintf(stderr, "%s: Not a regular file\n\n", filename.c_str());
+                std::string errmsg = filename + ": Not a regular file";
+                showPrevious(errmsg);
                 return;
             }
             unsigned long fileSize = fileStat.st_size;
             FILE* fp = fopen(localFilename.c_str(), "rb");
             if (!fp) {
-                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                std::string errmsg = filename + ": " + strerror(errno);
+                showPrevious(errmsg);
                 return;
             }
             snprintf(buffer, MAXN, "%s %s", msgFILENEW.c_str(), filename.c_str());
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, strlen(buffer)) < 0) {
                 fclose(fp);
+                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(recv) != msgSUCCESS) {
-                fprintf(stderr, "\n%s\n", recv);
+                showPrevious(recv);
                 fclose(fp);
                 return;
             }
@@ -763,7 +851,8 @@ class ClientUtility {
                 char filecontent[MAXN];
                 n = read(fileno(fp), filecontent, 1500);
                 if (n < 0) {
-                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                    std::string errmsg = filename + ": " + strerror(errno);
+                    showPrevious(errmsg);
                     fclose(fp);
                     return;
                 }
@@ -775,11 +864,13 @@ class ClientUtility {
                 memcpy(buffer + size + 1, filecontent, n);
                 size += n + 1;
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, size) < 0) {
+                    showPrevious(msgTIMEOUT);
                     fclose(fp);
                     return;
                 }
                 if (std::string(recv).find(msgSUCCESS) != 0u) {
-                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv);
+                    std::string errmsg = filename + ": " + recv;
+                    showPrevious(errmsg);
                     fclose(fp);
                     return;
                 }
@@ -790,9 +881,10 @@ class ClientUtility {
             snprintf(buffer, MAXN, "%s %s %lu %llx",
                     msgFILEEND.c_str(), filename.c_str(), fileSize, easyHash);
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, strlen(buffer)) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("\n%s\n", recv);
+            showContent("File Uploaded Successfully!\n");
         }
 
         static void udpDownloadFile(const int& fd, sockaddr*& serverAddrp) {
@@ -812,6 +904,7 @@ class ClientUtility {
             std::string msg;
             printf("Filename to Download: ");
             if (fgets(filenameCStr, MAXN, stdin) == NULL) {
+                showPrevious();
                 return;
             }
             trimNewLine(filenameCStr);
@@ -819,28 +912,31 @@ class ClientUtility {
             localFilename = std::string("Download/") + filename;
             msg = msgFILEREQ + " 0 " + filename;
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(recv).find(msgFAIL) == 0u) {
-                fprintf(stderr, "%s\n\n", recv + msgFAIL.length() + 1);
+                showPrevious(recv + msgFAIL.length() + 1);
                 return;
             }
             unsigned long fileSize;
             sscanf(recv, "%*s%lu", &fileSize);
             FILE* fp = fopen(localFilename.c_str(), "wb");
             if (!fp) {
-                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                std::string errmsg = filename + ": " + strerror(errno);
+                showPrevious(errmsg);
                 return;
             }
             unsigned long byteRecv = 0;
             while (byteRecv < fileSize) {
                 msg = msgFILEREQ + " 1 " + filename + " " + std::to_string(byteRecv);
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
+                    showPrevious(msgTIMEOUT);
                     fclose(fp);
                     return;
                 }
                 if (std::string(recv).find(msgFAIL) == 0u) {
-                    fprintf(stderr, "%s\n\n", recv + msgFAIL.length() + 1);
+                    showPrevious(recv + msgFAIL.length() + 1);
                     fclose(fp);
                     return;
                 }
@@ -849,7 +945,8 @@ class ClientUtility {
                 sscanf(recv, "%*s%d", &n);
                 offset = msgSUCCESS.length() + 1 + std::to_string(n).length() + 1 + 1;
                 if (write(fileno(fp), recv + offset, n) < 0) {
-                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                    std::string errmsg = filename + ": " + strerror(errno);
+                    showPrevious(errmsg);
                     fclose(fp);
                     return;
                 }
@@ -858,26 +955,28 @@ class ClientUtility {
             fclose(fp);
             msg = msgFILEREQ + " 2 " + filename;
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
             if (std::string(msg).find(msgFAIL) == 0u) {
-                fprintf(stderr, "%s\n\n", msg.c_str() + msgFAIL.length() + 1);
+                showPrevious(msg.c_str() + msgFAIL.length() + 1);
                 return;
             }
             struct stat fileStat;
             if (stat(localFilename.c_str(), &fileStat) < 0) {
-                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                std::string errmsg = filename + ": " + strerror(errno);
+                showPrevious(errmsg);
                 return;
             }
             unsigned long long hash;
             sscanf(recv, "%*s%llx", &hash);
             unsigned long long easyHash = fileHash(localFilename.c_str());
             if (easyHash != hash || static_cast<unsigned long>(fileStat.st_size) != fileSize) {
-                fprintf(stderr, "Error! FileSize or Hash value is not matched!\n\n");
+                showPrevious("Error! FileSize or Hash value is not matched!\n\n");
                 return;
             }
             else {
-                printf("Success!\n\n");
+                showContent("File Downloaded Successfully!\n");
             }
         }
 
@@ -993,6 +1092,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     if (command.find("L") == 0u) {
                         ClientUtility::udpLogout(fd, serverAddrp);
                     }
+                    else if (command.find("Q") == 0u) {
+                        ClientUtility::udpLogout(fd, serverAddrp);
+                    }
                     else if (command.find("DA") == 0u) {
                         ClientUtility::udpDeleteAccount(fd, serverAddrp);
                     }
@@ -1034,7 +1136,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     if (command.find("Q") == 0u) {
                         nowArticleIndex = -1;
                         nowStage =NPStage::MAIN;
-                        printf("\n");
+                        showContent("Welcome " + nowAccount + "\n\n");
                     }
                     else if (command.find("C") == 0u) {
                         ClientUtility::udpCommentArticle(fd, serverAddrp);
@@ -1064,7 +1166,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 case 4: // search
                     if (command.find("Q") == 0u) {
                         nowStage = NPStage::MAIN;
-                        printf("\n");
+                        showContent("Welcome " + nowAccount + "\n\n");
                     }
                     else if (command.find("S") == 0u) {
                         ClientUtility::udpSendFriendRequest(fd, serverAddrp);
@@ -1076,7 +1178,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 case 5: // friends
                     if (command.find("Q") == 0u) {
                         nowStage = NPStage::MAIN;
-                        printf("\n");
+                        showContent("Welcome " + nowAccount + "\n\n");
                     }
                     else if (command.find("A") == 0u) {
                         ClientUtility::udpAcceptFrientRequest(fd, serverAddrp);
@@ -1091,7 +1193,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 case 6: // chat
                     if (command.find("Q") == 0u) {
                         nowStage = NPStage::MAIN;
-                        printf("\n");
+                        showContent("Welcome " + nowAccount + "\n\n");
                     }
                     else if (command.find("T") == 0u) {
                         ClientUtility::udpChatIndividual(fd, serverAddrp);
@@ -1105,8 +1207,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     break;
                 case 7: // char group
                     if (command.find("Q") == 0u) {
-                        nowStage = NPStage::CHAT;
-                        printf("\n");
+                        ClientUtility::udpGetChatUsers(fd, serverAddrp);
                     }
                     else if (command.find("C") == 0u) {
                         ClientUtility::udpChatGroup(fd, serverAddrp, "C");
@@ -1134,6 +1235,27 @@ void cleanScreen() {
 void showContent(const std::string& msg) {
     cleanScreen();
     printf("%s\n", msg.c_str());
+    previousMsg = msg;
+}
+
+void showPrevious(std::string errmsg) {
+    cleanScreen();
+    printf("%s\n", previousMsg.c_str());
+    while (errmsg.length() > 0 && errmsg.front() == '\n') {
+        if (errmsg.length() <= 1) {
+            errmsg = "";
+        }
+        else {
+            errmsg = errmsg.substr(1);
+        }
+    }
+    while (errmsg.length() > 0 && errmsg.back() == '\n') {
+        errmsg.pop_back();
+    }
+    if (errmsg != "") {
+        printf("------------------------------------------------------------\n");
+        fprintf(stderr, "%s\n", errmsg.c_str());
+    }
 }
 
 void printOptions(const NPStage& stage) {

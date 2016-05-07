@@ -486,7 +486,7 @@ class ServerUtility {
             if (notInLiker) {
                 articles.getArticle(index).liker.insert(std::make_pair(account, true));
             }
-            std::string toSend = "Like Successfully!\n";
+            std::string toSend = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
@@ -501,7 +501,7 @@ class ServerUtility {
                 return;
             }
             articles.getArticle(index).liker.erase(account);
-            std::string toSend = "Unlike Successfully\n";
+            std::string toSend = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
@@ -528,7 +528,7 @@ class ServerUtility {
             }
             std::string toAdd = std::string(account) + ": " + comment;
             articles.getArticle(index).comment.push_back(toAdd);
-            std::string toSend = "Comment Successful!\n";
+            std::string toSend = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
@@ -559,7 +559,7 @@ class ServerUtility {
                  ++it) {
                 if (it->find(std::string(account) + ": ") == 0u) {
                     *it = toAdd;
-                    std::string toSend = "Comment Successful!\n";
+                    std::string toSend = msgSUCCESS;
                     udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                     return;
                 }
@@ -588,7 +588,7 @@ class ServerUtility {
                 articles.getArticle(index).comment.erase(
                         articles.getArticle(index).comment.begin() + pos
                 );
-                std::string toSend = "Delete Comment Successfully!\n";
+                std::string toSend = msgSUCCESS;
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
             }
             else {
@@ -614,6 +614,7 @@ class ServerUtility {
                     result += "[Offline]  Last Login: " + lastOnline;
                 }
             }
+            result += "\n";
             result += "Requests: \n";
             for (const auto& who : serverData[account].friendRequest) {
                 if (serverData.count(who.first) < 1) {
@@ -699,7 +700,7 @@ class ServerUtility {
             serverData[source].friendRequest.erase(target);
             serverData[source].friends.insert(std::make_pair(target, true));
             serverData[target].friends.insert(std::make_pair(source, true));
-            std::string result = "Accepted Successfully!\n";
+            std::string result = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
@@ -719,7 +720,7 @@ class ServerUtility {
                 return;
             }
             serverData[source].friendRequest.erase(target);
-            std::string result = "Rejected Successfully!\n";
+            std::string result = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
@@ -850,7 +851,9 @@ class ServerUtility {
             }
             else {
                 for (const auto& who : groupData[target].member) {
-                    groupData[target].msgBuffer[who.first].push_back(content);
+                    if (who.first != account) {
+                        groupData[target].msgBuffer[who.first].push_back(content);
+                    }
                 }
                 udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
             }

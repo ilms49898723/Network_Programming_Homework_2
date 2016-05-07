@@ -8,7 +8,7 @@ const std::string msgOptMAIN = std::string("[SP]Show Profile   [SE]Set Profile\n
                                std::string("[SA]Show Article   [A]Add Article   [E]Enter Article\n") +
                                std::string("[F]Friends         [C]Chat          [S]Search User\n") +
                                std::string("[U]Upload File     [D]Download File\n") +
-                               std::string("[DA]Delete Account [L]Logout\n");
+                               std::string("[DA]Delete Account [L/Q]Logout\n");
 const std::string msgOptARTICLE = std::string("[L]Like            [UL]Unlike\n") +
                                   std::string("[C]Comment         [EC]Edit Last Comment  [DC]Delete Last Comment\n") +
                                   std::string("[E]Edit Article    [D]Delete Article      [Q]Quit\n");
@@ -63,6 +63,8 @@ const std::string msgFAIL = "Failed!\n";
 const std::string msgPERMISSIONDENIED = "Permission Denied!\n";
 const std::string msgUSERNOTFOUND = "User not found!\n";
 const std::string msgARTICLENOTFOUND = "This article doesn\'t exist anymore!\n";
+
+const std::string msgTIMEOUT = "Timeout! Cannot connect to server!\n";
 
 #endif // NETWORK_PROGRAMMING_HOMEWORK_2_UDPMESSAGE_H_
 
