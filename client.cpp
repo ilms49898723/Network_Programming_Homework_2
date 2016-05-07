@@ -671,7 +671,7 @@ class ClientUtility {
                 return;
             }
             if (std::string(recv).find(msgFAIL) == 0u) {
-                fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv + msgFAIL.length() + 1);
+                fprintf(stderr, "%s\n\n", recv + msgFAIL.length() + 1);
                 return;
             }
             unsigned long fileSize;
@@ -689,7 +689,7 @@ class ClientUtility {
                     return;
                 }
                 if (std::string(recv).find(msgFAIL) == 0u) {
-                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv + msgFAIL.length() + 1);
+                    fprintf(stderr, "%s\n\n", recv + msgFAIL.length() + 1);
                     fclose(fp);
                     return;
                 }
@@ -710,7 +710,7 @@ class ClientUtility {
                 return;
             }
             if (std::string(msg).find(msgFAIL) == 0u) {
-                fprintf(stderr, "%s: %s\n\n", filename.c_str(), msg.c_str() + msgFAIL.length() + 1);
+                fprintf(stderr, "%s\n\n", msg.c_str() + msgFAIL.length() + 1);
                 return;
             }
             struct stat fileStat;
@@ -722,7 +722,7 @@ class ClientUtility {
             sscanf(recv, "%*s%llx", &hash);
             unsigned long long easyHash = fileHash(localFilename.c_str());
             if (easyHash != hash || static_cast<unsigned long>(fileStat.st_size) != fileSize) {
-                fprintf(stderr, "Error!\n\n");
+                fprintf(stderr, "Error! FileSize or Hash value is not matched!\n\n");
                 return;
             }
             else {
