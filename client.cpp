@@ -369,7 +369,7 @@ class ClientUtility {
                 nowStage = NPStage::MAIN;
                 return;
             }
-            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
@@ -388,7 +388,7 @@ class ClientUtility {
                 nowStage = NPStage::MAIN;
                 return;
             }
-            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
@@ -414,7 +414,7 @@ class ClientUtility {
                 nowStage = NPStage::MAIN;
                 return;
             }
-            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
@@ -440,7 +440,7 @@ class ClientUtility {
                 nowStage = NPStage::MAIN;
                 return;
             }
-            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
@@ -461,7 +461,7 @@ class ClientUtility {
                 nowStage = NPStage::MAIN;
                 return;
             }
-            msg = msgENTERARTICLE + " " + std::to_string(nowArticleIndex);
+            msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
             }
