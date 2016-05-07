@@ -758,6 +758,11 @@ class ServerUtility {
                 return;
             }
             FILE* fp = fopen(filename.c_str(), "ab");
+            if (!fp) {
+                std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
             int n = write(fileno(fp), msg + msgOffset, byteToWrite);
             std::string result = msgSUCCESS + " " + std::to_string(n);
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());

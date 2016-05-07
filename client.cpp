@@ -598,10 +598,12 @@ class ClientUtility {
             }
             snprintf(buffer, MAXN, "%s %s", msgFILENEW.c_str(), filename.c_str());
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, strlen(buffer)) < 0) {
+                fclose(fp);
                 return;
             }
             if (std::string(recv) != msgSUCCESS) {
                 fprintf(stderr, "\n%s\n", recv);
+                fclose(fp);
                 return;
             }
             unsigned long byteSend = 0;
@@ -611,6 +613,7 @@ class ClientUtility {
                 n = read(fileno(fp), filecontent, 1500);
                 if (n < 0) {
                     fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                    fclose(fp);
                     return;
                 }
                 memset(buffer, 0, sizeof(buffer));
@@ -621,14 +624,17 @@ class ClientUtility {
                 memcpy(buffer + size + 1, filecontent, n);
                 size += n + 1;
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, size) < 0) {
+                    fclose(fp);
                     return;
                 }
                 if (std::string(recv).find(msgSUCCESS) != 0u) {
                     fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv);
+                    fclose(fp);
                     return;
                 }
                 byteSend += n;
             }
+            fclose(fp);
             unsigned long long easyHash = fileHash(localFilename.c_str());
             snprintf(buffer, MAXN, "%s %s %lu %llx",
                     msgFILEEND.c_str(), filename.c_str(), fileSize, easyHash);
