@@ -1,5 +1,5 @@
-#ifndef NETWORK_PROGRAMMING_GLOBAL_H_
-#define NETWORK_PROGRAMMING_GLOBAL_H_
+#ifndef NETWORK_PROGRAMMING_HOMEWORK_2_NPINC_H_
+#define NETWORK_PROGRAMMING_HOMEWORK_2_NPINC_H_
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -27,5 +27,5 @@ enum class NPArticlePermission {
     PUBLIC, AUTHOR, FRIENDS, SPEC
 };
 
-#endif /* NETWORK_PROGRAMMING_GLOBAL_H_ */
+#endif // NETWORK_PROGRAMMING_HOMEWORK_2_NPINC_H_
 

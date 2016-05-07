@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory.h>
-#include "global.h"
+#include "npinc.h"
 
 class UDPSeqCounter {
     public:

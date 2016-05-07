@@ -8,7 +8,7 @@
 #include <deque>
 #include <vector>
 #include <utility>
-#include "global.h"
+#include "npinc.h"
 #include "nputility.h"
 #include "udpmessage.h"
 #include "UDPUtil.h"

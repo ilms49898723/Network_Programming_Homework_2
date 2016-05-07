@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include "global.h"
+#include "npinc.h"
 #include "nputility.h"
 #include "udpmessage.h"
 #include "UDPUtil.h"
