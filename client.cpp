@@ -799,7 +799,8 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
     FD_ZERO(&fdset);
     // server sockaddr*
     sockaddr* serverAddrp = reinterpret_cast<sockaddr*>(&serverAddr);
-    if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msgNEWCONNECTION.c_str(), msgNEWCONNECTION.length()) < 0) {
+    std::string connectMsg = msgNEWCONNECTION;
+    if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, connectMsg.c_str(), connectMsg.length()) < 0) {
         return;
     }
     printf("%s\n", buffer);
@@ -820,7 +821,6 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
             }
         }
         if (FD_ISSET(fileno(stdin), &fdset)) {
-            // TODO: complete it
             memset(buffer, 0, sizeof(buffer));
             if (fgets(buffer, MAXN, stdin) == NULL) {
                 continue;
