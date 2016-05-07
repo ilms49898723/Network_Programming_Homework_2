@@ -140,7 +140,7 @@ class Articles {
             return articles[index];
         }
 
-        const std::map<int, ArticleData>& getAllArticles() const {
+        std::map<int, ArticleData>& getAllArticles() {
             return articles;
         }
 
@@ -219,21 +219,55 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s", account);
             serverData.erase(account);
             // clean info in serverData
-            for (auto user : serverData) {
+            for (auto& user : serverData) {
                 user.second.friends.erase(account);
                 user.second.friendRequest.erase(account);
             }
             // clean messageBuffer
-            for (auto item : messageData) {
+            for (auto& item : messageData) {
                 item.second.msgBuffer.erase(account);
             }
             messageData.erase(account);
             // clean groupData
-            for (auto item : groupData) {
+            for (auto& item : groupData) {
                 item.second.member.erase(account);
             }
+            // clean articles
+            while (true) {
+                int toDel = -1;
+                for (const auto& item : articles.getAllArticles()) {
+                    if (item.second.author == account) {
+                        toDel = item.first;
+                    }
+                }
+                if (toDel == -1) {
+                    break;
+                }
+                articles.removeArticle(toDel);
+            }
+            // clear likes in articles
+            for (auto& item : articles.getAllArticles()) {
+                item.second.liker.erase(account);
+            }
+            // clear comments in articles
+            for (auto& item : articles.getAllArticles()) {
+                std::vector<std::string>& comments = item.second.comment;
+                while (true) {
+                    int toDel = -1;
+                    for (int i = static_cast<int>(comments.size() - 1); i >= 0; --i) {
+                        if (comments[i].find(std::string(account) + ": ") == 0u) {
+                            toDel = i;
+                            break;
+                        }
+                    }
+                    if (toDel == -1) {
+                        break;
+                    }
+                    comments.erase(comments.begin() + toDel);
+                }
+            }
             printf("Account %s has been deleted!\n", account);
-            std::string toSend = "Delete Successfully!\n";
+            std::string toSend = "Account Delete Successfully!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
@@ -808,6 +842,7 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s", account);
             for (auto& item : groupData) {
                 item.second.member.erase(account);
+                item.second.msgBuffer.erase(account);
             }
             std::deque<std::string> emptyGroupName;
             for (const auto& item : groupData) {

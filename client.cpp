@@ -1332,13 +1332,13 @@ void showPrevious(std::string errmsg) {
         errmsg.pop_back();
     }
     if (errmsg != "") {
-        printf("------------------------------------------------------------\n");
+        printf("----------------------------------------------------------------------\n");
         fprintf(stderr, "%s\n", errmsg.c_str());
     }
 }
 
 void printOptions(const NPStage& stage) {
-    printf("------------------------------------------------------------\n");
+    printf("----------------------------------------------------------------------\n");
     switch (static_cast<int>(stage)) {
         case 0: // init
             break;
