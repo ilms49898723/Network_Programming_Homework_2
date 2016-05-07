@@ -48,7 +48,7 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
     counter = 0;
     while ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) < 0) {
         counter++;
-        if (counter > 10) {
+        if (counter > 15) {
             fprintf(stderr, "UDPUtil: sendto: %s\n",strerror(errno));
             return -1;
         }
@@ -61,7 +61,14 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
         ++counter;
         if (byteRecv < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
-                if ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) < 0) {
+                bool flag = false;
+                for (int i = 0; i < 15; ++i) {
+                    if ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) >= 0) {
+                        flag = true;
+                        break;
+                    }
+                }
+                if (!flag) {
                     fprintf(stderr, "UDPUtil: sendto: %s\n", strerror(errno));
                     return -1;
                 }
@@ -84,7 +91,7 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
                 return byteRecv - 20;
             }
         }
-        if (counter >= 10) {
+        if (counter > 30) {
             fprintf(stderr, "Timeout! Can\'t connect to server or server is too busy\n");
             fprintf(stderr, "Please try again later\n");
             return -1;
