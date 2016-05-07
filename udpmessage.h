@@ -44,6 +44,7 @@ const std::string msgFILENEW = "FILENEW";
 const std::string msgFILESEQ = "FILESEQ";
 const std::string msgFILEEND = "FILEEND";
 const std::string msgFILEREQ = "FILEREQ";
+const std::string msgCHECKFILEEXIST = "FILECHECKEXIST";
 
 const std::string msgSUCCESS = "Success!\n";
 const std::string msgFAIL = "Failed!\n";

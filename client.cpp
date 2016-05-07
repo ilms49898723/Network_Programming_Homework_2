@@ -583,21 +583,25 @@ class ClientUtility {
             localFilename = std::string("Download/") + filenameCStr;
             struct stat fileStat;
             if (stat(localFilename.c_str(), &fileStat) < 0) {
-                fprintf(stderr, "%s\n", strerror(errno));
+                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
                 return;
             }
             if (!S_ISREG(fileStat.st_mode)) {
-                fprintf(stderr, "%s: Not a regular file!\n", filename.c_str());
+                fprintf(stderr, "%s: Not a regular file\n\n", filename.c_str());
                 return;
             }
             unsigned long fileSize = fileStat.st_size;
             FILE* fp = fopen(localFilename.c_str(), "rb");
             if (!fp) {
-                fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
+                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
                 return;
             }
             snprintf(buffer, MAXN, "%s %s", msgFILENEW.c_str(), filename.c_str());
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, strlen(buffer)) < 0) {
+                return;
+            }
+            if (std::string(recv) != msgSUCCESS) {
+                fprintf(stderr, "\n%s\n", recv);
                 return;
             }
             unsigned long byteSend = 0;
@@ -606,7 +610,7 @@ class ClientUtility {
                 char filecontent[MAXN];
                 n = read(fileno(fp), filecontent, 1500);
                 if (n < 0) {
-                    fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
+                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
                     return;
                 }
                 memset(buffer, 0, sizeof(buffer));
@@ -619,6 +623,10 @@ class ClientUtility {
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, buffer, size) < 0) {
                     return;
                 }
+                if (std::string(recv).find(msgSUCCESS) != 0u) {
+                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv);
+                    return;
+                }
                 byteSend += n;
             }
             unsigned long long easyHash = fileHash(localFilename.c_str());
@@ -628,6 +636,92 @@ class ClientUtility {
                 return;
             }
             printf("\n%s\n", recv);
+        }
+
+        static void udpDownloadFile(const int& fd, sockaddr*& serverAddrp) {
+            // format: FILEREQ 0 filename
+            // server return SUCCESS fileSize(if success)
+            //               FAIL error message(if fail)
+            // format: FILEREQ 1 filename offset
+            // server return SUCCESS n content(if success)
+            //               FAIL error message(if failed)
+            // format: FILEREQ 2 filename
+            // server return SUCCESS hash(if success)
+            //               FAIL error message(if failed)
+            char recv[MAXN];
+            char filenameCStr[MAXN];
+            std::string filename;
+            std::string localFilename;
+            std::string msg;
+            printf("Filename to Download: ");
+            if (fgets(filenameCStr, MAXN, stdin) == NULL) {
+                return;
+            }
+            trimNewLine(filenameCStr);
+            filename = filenameCStr;
+            localFilename = std::string("Download/") + filename;
+            msg = msgFILEREQ + " 0 " + filename;
+            if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            if (std::string(recv).find(msgFAIL) == 0u) {
+                fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv + msgFAIL.length() + 1);
+                return;
+            }
+            unsigned long fileSize;
+            sscanf(recv, "%*s%lu", &fileSize);
+            FILE* fp = fopen(localFilename.c_str(), "wb");
+            if (!fp) {
+                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                return;
+            }
+            unsigned long byteRecv = 0;
+            while (byteRecv < fileSize) {
+                msg = msgFILEREQ + " 1 " + filename + " " + std::to_string(byteRecv);
+                if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
+                    fclose(fp);
+                    return;
+                }
+                if (std::string(recv).find(msgFAIL) == 0u) {
+                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), recv + msgFAIL.length() + 1);
+                    fclose(fp);
+                    return;
+                }
+                int n;
+                int offset;
+                sscanf(recv, "%*s%d", &n);
+                offset = msgSUCCESS.length() + 1 + std::to_string(n).length() + 1 + 1;
+                if (write(fileno(fp), recv + offset, n) < 0) {
+                    fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                    fclose(fp);
+                    return;
+                }
+                byteRecv += n;
+            }
+            fclose(fp);
+            msg = msgFILEREQ + " 2 " + filename;
+            if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
+                return;
+            }
+            if (std::string(msg).find(msgFAIL) == 0u) {
+                fprintf(stderr, "%s: %s\n\n", filename.c_str(), msg.c_str() + msgFAIL.length() + 1);
+                return;
+            }
+            struct stat fileStat;
+            if (stat(localFilename.c_str(), &fileStat) < 0) {
+                fprintf(stderr, "%s: %s\n\n", filename.c_str(), strerror(errno));
+                return;
+            }
+            unsigned long long hash;
+            sscanf(recv, "%*s%llx", &hash);
+            unsigned long long easyHash = fileHash(localFilename.c_str());
+            if (easyHash != hash || static_cast<unsigned long>(fileStat.st_size) != fileSize) {
+                fprintf(stderr, "Error!\n\n");
+                return;
+            }
+            else {
+                printf("Success!\n\n");
+            }
         }
 
     private:
@@ -765,6 +859,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     else if (command.find("U") == 0u) {
                         ClientUtility::udpUploadFile(fd, serverAddrp);
+                    }
+                    else if (command.find("D") == 0u) {
+                        ClientUtility::udpDownloadFile(fd, serverAddrp);
                     }
                     else {
                         fprintf(stderr, "Invalid Command\n");

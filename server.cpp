@@ -694,6 +694,26 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
+        static void udpCheckFileExist(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            struct stat fileStat;
+            char filenameCStr[MAXN];
+            std::string filename;
+            sscanf(msg.c_str(), "%*s%s", filenameCStr);
+            filename = std::string("Upload/") + filenameCStr;
+            if (stat(filename.c_str(), &fileStat) < 0) {
+                std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            if (!S_ISREG(fileStat.st_mode)) {
+                std::string toSend = std::string(filenameCStr) + ": Not a regular file";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            std::string result = msgSUCCESS;
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
         static void udpFileNew(const int& fd, sockaddr*& clientAddrp, const char* msg) {
             // start: FILENEW filename
             // server return SUCCESS!
@@ -704,7 +724,7 @@ class ServerUtility {
             FILE* fp = fopen(filename.c_str(), "wb");
             if (!fp) {
                 fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
-                std::string toSend = msgFAIL;
+                std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
@@ -727,15 +747,19 @@ class ServerUtility {
                                  std::to_string(offset).length() + 1 +
                                  std::to_string(byteToWrite).length() + 1 + 1;
             struct stat fileStat;
-            stat(filename.c_str(), &fileStat);
+            if (stat(filename.c_str(), &fileStat) < 0) {
+                std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
             if (static_cast<unsigned long>(fileStat.st_size) < offset) {
-                std::string toSend = "0";
+                std::string toSend = "Data with offset " + std::to_string(offset) + " is ignored(duplicated)\n";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
             FILE* fp = fopen(filename.c_str(), "ab");
             int n = write(fileno(fp), msg + msgOffset, byteToWrite);
-            std::string result = std::to_string(n);
+            std::string result = msgSUCCESS + " " + std::to_string(n);
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
             fclose(fp);
         }
@@ -750,7 +774,11 @@ class ServerUtility {
             sscanf(msg, "%*s%s%lu%llx", filenameCStr, &fileSize, &hash);
             filename = std::string("Upload/") + filenameCStr;
             struct stat fileStat;
-            stat(filename.c_str(), &fileStat);
+            if (stat(filename.c_str(), &fileStat) < 0) {
+                std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
             unsigned long long easyHash = fileHash(filename);
             std::string result;
             if (static_cast<unsigned long>(fileStat.st_size) == fileSize &&
@@ -761,6 +789,108 @@ class ServerUtility {
                 result = msgFAIL;
             }
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
+        static void udpFileReq(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: FILEREQ 0 filename
+            // server return SUCCESS fileSize(if success)
+            //               FAIL error message(if fail)
+            // format: FILEREQ 1 filename offset
+            // server return SUCCESS n content(if success)
+            //               FAIL error message(if failed)
+            // format: FILEREQ 2 filename
+            // server return SUCCESS hash(if success)
+            //               FAIL error message(if failed)
+            int config;
+            unsigned offset = 0;
+            sscanf(msg.c_str(), "%*s%d", &config);
+            offset += msgFILEREQ.length() + 1 + std::to_string(config).length() + 1;
+            if (config == 0) {
+                char filenameCStr[MAXN];
+                std::string filename;
+                sscanf(msg.c_str() + offset, "%s", filenameCStr);
+                filename = std::string("Upload/") + filenameCStr;
+                struct stat fileStat;
+                if (stat(filename.c_str(), &fileStat) < 0) {
+                    std::string toSend = msgFAIL + " " + std::string(filenameCStr) + ": " + strerror(errno);
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                if (!S_ISREG(fileStat.st_mode)) {
+                    std::string toSend = msgFAIL + " " + std::string(filenameCStr) + ": Not a regular file";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                unsigned long fileSize = static_cast<unsigned long>(fileStat.st_size);
+                std::string result = msgSUCCESS + " " + std::to_string(fileSize);
+                udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+            }
+            else if (config == 1) {
+                unsigned long fileOffset;
+                char filenameCStr[MAXN];
+                std::string filename;
+                sscanf(msg.c_str() + offset, "%s%lu", filenameCStr, &fileOffset);
+                filename = std::string("Upload/") + filenameCStr;
+                struct stat fileStat;
+                if (stat(filename.c_str(), &fileStat) < 0) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": " + strerror(errno);
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                if (!S_ISREG(fileStat.st_mode)) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": Not a regular file";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                if (static_cast<unsigned long>(fileStat.st_size) < fileOffset) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": Offset is larger than file size";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                FILE* fp = fopen(filename.c_str(), "rb");
+                if (!fp) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": " + strerror(errno);
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                fseek(fp, fileOffset, SEEK_SET);
+                char buffer[MAXN];
+                char content[MAXN];
+                int n;
+                memset(buffer, 0, sizeof(buffer));
+                if ((n = read(fileno(fp), content, 1500)) < 0) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": " + strerror(errno);
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    fclose(fp);
+                    return;
+                }
+                fclose(fp);
+                unsigned size = snprintf(buffer, MAXN, "%s %d ", msgSUCCESS.c_str(), n);
+                memcpy(buffer + size + 1, content, n);
+                size += n + 1;
+                udp.udpSend(fd, clientAddrp, buffer, size);
+            }
+            else if (config == 2) {
+                char filenameCStr[MAXN];
+                std::string filename;
+                sscanf(msg.c_str() + offset, "%s", filenameCStr);
+                filename = std::string("Upload/") + filenameCStr;
+                struct stat fileStat;
+                if (stat(filename.c_str(), &fileStat) < 0) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": " + strerror(errno);
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                if (!S_ISREG(fileStat.st_mode)) {
+                    std::string toSend = msgFAIL + " " + filenameCStr + ": Not a regular file";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+                unsigned long long hash = fileHash(filename);
+                char buffer[MAXN];
+                snprintf(buffer, MAXN, "%s %llx", msgSUCCESS.c_str(), hash);
+                udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
+            }
         }
 
     private:
@@ -946,6 +1076,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgFILEEND) == 0u) {
                 ServerUtility::udpFileEnd(fd, clientAddrp, buffer);
+            }
+            else if (msg.find(msgFILEREQ) == 0u) {
+                ServerUtility::udpFileReq(fd, clientAddrp, msg);
             }
         }
     }

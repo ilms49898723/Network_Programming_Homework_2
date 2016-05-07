@@ -26,6 +26,9 @@ int stringHash(const char* src, size_t len) {
 
 unsigned long long fileHash(const std::string& filename) {
     FILE* fp = fopen(filename.c_str(), "rb");
+    if (!fp) {
+        return 0xFFFFFFFFFFFFFFFFLL;
+    }
     unsigned long long ret = 0u;
     unsigned c = 0xdefaced;
     unsigned coef = 31;
@@ -43,6 +46,7 @@ unsigned long long fileHash(const std::string& filename) {
         ret += (tmp & c) * coef + c;
         coef *= 31;
     }
+    fclose(fp);
     return ret;
 }
 
