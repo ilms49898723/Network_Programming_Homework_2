@@ -833,6 +833,7 @@ class ServerUtility {
             }
             groupData[groupname].member.insert(std::make_pair(account, true));
             std::string result = std::string("Enter Group ") + groupname + " Successfully!";
+            printf("%s entered chat group %s\n", account, groupname.c_str());
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
@@ -844,6 +845,7 @@ class ServerUtility {
                 item.second.member.erase(account);
                 item.second.msgBuffer.erase(account);
             }
+            printf("%s left chat group\n", account);
             std::deque<std::string> emptyGroupName;
             for (const auto& item : groupData) {
                 if (item.second.member.empty()) {
@@ -851,6 +853,7 @@ class ServerUtility {
                 }
             }
             for (const auto& item : emptyGroupName) {
+                printf("Chat group %s is empty. Removed.\n", item.c_str());
                 groupData.erase(item);
             }
             udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
@@ -1029,6 +1032,7 @@ class ServerUtility {
             else {
                 result = msgFAIL;
             }
+            printf("New file %s was uploaded\n", filenameCStr);
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
@@ -1232,7 +1236,6 @@ void serverFunc(const int& fd) {
             }
         }
         if (FD_ISSET(fd, &fdset)) {
-            // TODO: complete it
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             udp.udpRecv(fd, clientAddrp, buffer, MAXN);
@@ -1326,6 +1329,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgCHECKFILEEXIST) == 0u) {
+                ServerUtility::udpCheckFileExist(fd, clientAddrp, msg);
             }
             else if (msg.find(msgFILENEW) == 0u) {
                 ServerUtility::udpFileNew(fd, clientAddrp, buffer);
