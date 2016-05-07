@@ -1042,8 +1042,8 @@ class ServerUtility {
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
-            if (static_cast<unsigned long>(fileStat.st_size) < offset) {
-                std::string toSend = "Data with offset " + std::to_string(offset) + " is ignored(duplicated)";
+            if (static_cast<unsigned long>(fileStat.st_size) > offset) {
+                std::string toSend = msgSUCCESS + " Data with offset " + std::to_string(offset) + " is ignored(duplicated)";
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                 return;
             }
@@ -1079,11 +1079,12 @@ class ServerUtility {
             if (static_cast<unsigned long>(fileStat.st_size) == fileSize &&
                 hash == easyHash) {
                 result = msgSUCCESS;
+                printf("New file %s was uploaded successfully\n", filenameCStr);
             }
             else {
                 result = msgFAIL;
+                printf("File %s upload error! Filesize of hash value is mismatched\n", filenameCStr);
             }
-            printf("New file %s was uploaded\n", filenameCStr);
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 

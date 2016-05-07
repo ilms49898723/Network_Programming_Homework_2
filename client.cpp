@@ -1058,6 +1058,7 @@ class ClientUtility {
                 return;
             }
             unsigned long byteSend = 0;
+            time_t timeStamp = time(NULL) - 1;
             while (byteSend < fileSize) {
                 int n;
                 char filecontent[MAXN];
@@ -1085,7 +1086,14 @@ class ClientUtility {
                     return;
                 }
                 byteSend += n;
+                if (difftime(time(NULL), timeStamp) >= 1.0) {
+                    unsigned long percent = byteSend * 100 / fileSize;
+                    printf("\rUploading...%lu%% (%lu/%lu)", percent, byteSend, fileSize);
+                    fflush(stdout);
+                    timeStamp = time(NULL);
+                }
             }
+            printf("\rUploading...100%% (%lu/%lu)\n", fileSize, fileSize);
             fclose(fp);
             unsigned long long easyHash = fileHash(localFilename.c_str());
             snprintf(buffer, MAXN, "%s %s %lu %llx",
@@ -1094,8 +1102,14 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            printf("File Uploaded Successfully!\n");
-            flag = true;
+            if (std::string(recv) == msgSUCCESS) {
+                printf("File Uploaded Successfully!\n");
+                flag = true;
+            }
+            else {
+                printf("File Upload Failed!\n Filesize of hash value mismatched!\n");
+                printf("Please try again later!\n");
+            }
         }
 
         static void udpDownloadFile(const int& fd, sockaddr*& serverAddrp, const std::string& argu, bool& flag) {
@@ -1133,6 +1147,7 @@ class ClientUtility {
                 return;
             }
             unsigned long byteRecv = 0;
+            time_t timeStamp = time(NULL) - 1;
             while (byteRecv < fileSize) {
                 msg = msgFILEREQ + " 1 " + filename + " " + std::to_string(byteRecv);
                 if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
@@ -1154,7 +1169,14 @@ class ClientUtility {
                     return;
                 }
                 byteRecv += n;
+                if (difftime(time(NULL), timeStamp) >= 1.0) {
+                    unsigned long percent = byteRecv * 100 / fileSize;
+                    printf("\rDownloading...%lu%% (%lu/%lu)", percent, byteRecv, fileSize);
+                    fflush(stdout);
+                    timeStamp = time(NULL);
+                }
             }
+            printf("\rDownloading...100%% (%lu/%lu)\n", fileSize, fileSize);
             fclose(fp);
             msg = msgFILEREQ + " 2 " + filename;
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
