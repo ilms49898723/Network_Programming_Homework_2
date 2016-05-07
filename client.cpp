@@ -137,13 +137,21 @@ class ClientUtility {
             char name[MAXN];
             char birthday[MAXN];
             printf("Name: ");
-            if (fgets(name, MAXN, stdin) == NULL || !isValidString(name)) {
+            if (fgets(name, MAXN, stdin) == NULL) {
+                showPrevious();
+                return;
+            }
+            if (!isValidString(name)) {
                 showPrevious("Cannot contain space or tab character");
                 return;
             }
             trimNewLine(name);
             printf("Birthday: ");
-            if (fgets(birthday, MAXN, stdin) == NULL || !isValidString(birthday)) {
+            if (fgets(birthday, MAXN, stdin) == NULL) {
+                showPrevious();
+                return;
+            }
+            if (!isValidString(birthday)) {
                 showPrevious("Cannot contain space or tab character");
                 return;
             }
@@ -343,6 +351,10 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                showPrevious(buffer);
+                return;
+            }
             showContent(buffer);
         }
 
@@ -400,8 +412,20 @@ class ClientUtility {
         }
 
         static void udpLikeArticle(const int& fd, sockaddr*& serverAddrp) {
-            std::string msg = msgLIKEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            std::string msg;
             char buffer[MAXN];
+            msg = msgCHECKARTICLEACCESS + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                showPrevious(buffer);
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                return;
+            }
+            msg = msgLIKEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
@@ -416,14 +440,32 @@ class ClientUtility {
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(buffer);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                showPrevious(buffer);
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
                 return;
             }
             showContent(buffer);
         }
 
         static void udpUnlikeArticle(const int& fd, sockaddr*& serverAddrp) {
-            std::string msg = msgUNLIKEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            std::string msg;
             char buffer[MAXN];
+            msg = msgCHECKARTICLEACCESS + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                showPrevious(buffer);
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                return;
+            }
+            msg = msgUNLIKEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
@@ -438,6 +480,12 @@ class ClientUtility {
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
                 return;
             }
             showContent(buffer);
@@ -445,15 +493,27 @@ class ClientUtility {
 
         static void udpCommentArticle(const int& fd, sockaddr*& serverAddrp) {
             // format: COMMENTARTICLE account index message
+            std::string msg;
             char buffer[MAXN];
+            msg = msgCHECKARTICLEACCESS + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
+                return;
+            }
             printf("Comment: ");
             if (fgets(buffer, MAXN, stdin) == NULL) {
                 showPrevious();
                 return;
             }
             trimNewLine(buffer);
-            std::string msg = msgCOMMENTARTICLE + " " + nowAccount + " " +
-                              std::to_string(nowArticleIndex) + " " + buffer;
+            msg = msgCOMMENTARTICLE + " " + nowAccount + " " +
+                  std::to_string(nowArticleIndex) + " " + buffer;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
@@ -467,9 +527,18 @@ class ClientUtility {
             std::string commentResult = buffer;
             msg = msgENTERARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
                 return;
             }
-            showContent(buffer);
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
+                return;
+            }
+            else {
+                showContent(buffer);
+            }
             if (commentResult != msgSUCCESS) {
                 showPrevious(commentResult);
             }
@@ -477,15 +546,27 @@ class ClientUtility {
 
         static void udpEditCommentArticle(const int& fd, sockaddr*& serverAddrp) {
             // format: EDITCOMMENTARTICLE account index message
+            std::string msg;
             char buffer[MAXN];
+            msg = msgCHECKARTICLEACCESS + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
+                return;
+            }
             printf("Comment: ");
             if (fgets(buffer, MAXN, stdin) == NULL) {
                 showPrevious();
                 return;
             }
             trimNewLine(buffer);
-            std::string msg = msgEDITCOMMENTARTICLE + " " + nowAccount + " " +
-                              std::to_string(nowArticleIndex) + " " + buffer;
+            msg = msgEDITCOMMENTARTICLE + " " + nowAccount + " " +
+                  std::to_string(nowArticleIndex) + " " + buffer;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
@@ -502,7 +583,15 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            showContent(buffer);
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
+                return;
+            }
+            else {
+                showContent(buffer);
+            }
             if (commentResult != msgSUCCESS) {
                 showPrevious(commentResult);
             }
@@ -510,9 +599,21 @@ class ClientUtility {
 
         static void udpDeleteCommentArticle(const int& fd, sockaddr*& serverAddrp) {
             // format DELETECOMMENTARTICLE account index
-            std::string msg = msgDELETECOMMENTARTICLE + " " + nowAccount + " " +
-                              std::to_string(nowArticleIndex);
+            std::string msg;
             char buffer[MAXN];
+            msg = msgCHECKARTICLEACCESS + " " + nowAccount + " " + std::to_string(nowArticleIndex);
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
+                return;
+            }
+            msg = msgDELETECOMMENTARTICLE + " " + nowAccount + " " +
+                  std::to_string(nowArticleIndex);
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
@@ -529,7 +630,15 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            showContent(buffer);
+            if (std::string(buffer) == msgPERMISSIONDENIED) {
+                nowArticleIndex = -1;
+                nowStage = NPStage::MAIN;
+                showPrevious(buffer);
+                return;
+            }
+            else {
+                showContent(buffer);
+            }
             if (commentResult != msgSUCCESS) {
                 showPrevious(commentResult);
             }
@@ -596,7 +705,12 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            showContent(buffer);
+            if (std::string(buffer) == msgSUCCESS) {
+                showContent(buffer);
+            }
+            else {
+                showPrevious(buffer);
+            }
         }
 
         static void udpAcceptFrientRequest(const int& fd, sockaddr*& serverAddrp) {
@@ -613,15 +727,15 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            std::string acceptResult = buffer;
+            std::string result = buffer;
             msg = msgSHOWFRIENDS + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
             }
             showContent(buffer);
-            if (acceptResult != msgSUCCESS) {
-                showPrevious(acceptResult);
+            if (result != msgSUCCESS) {
+                showPrevious(result);
             }
         }
 
@@ -639,15 +753,41 @@ class ClientUtility {
                 showPrevious(msgTIMEOUT);
                 return;
             }
-            std::string acceptResult = buffer;
+            std::string result = buffer;
             msg = msgSHOWFRIENDS + " " + nowAccount;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
                 showPrevious(msgTIMEOUT);
                 return;
             }
             showContent(buffer);
-            if (acceptResult != msgSUCCESS) {
-                showPrevious(acceptResult);
+            if (result != msgSUCCESS) {
+                showPrevious(result);
+            }
+        }
+
+        static void udpDeleteFriend(const int& fd, sockaddr*& serverAddrp) {
+            printf("Friend Account to delete: ");
+            char target[MAXN];
+            char buffer[MAXN];
+            if (fgets(target, MAXN, stdin) == NULL) {
+                showPrevious();
+                return;
+            }
+            trimNewLine(target);
+            std::string msg = msgDELETEFRIEND + " " + nowAccount + " " + target;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            std::string result = buffer;
+            msg = msgSHOWFRIENDS + " " + nowAccount;
+            if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
+                showPrevious(msgTIMEOUT);
+                return;
+            }
+            showContent(buffer);
+            if (result != msgSUCCESS) {
+                showPrevious(result);
             }
         }
 
@@ -1265,6 +1405,9 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     else if (command.find("R") == 0u) {
                         ClientUtility::udpRejectFriendRequest(fd, serverAddrp);
                     }
+                    else if (command.find("D") == 0u) {
+                        ClientUtility::udpDeleteFriend(fd, serverAddrp);
+                    }
                     else {
                         showPrevious("Invalid Command\n");
                     }
@@ -1332,13 +1475,13 @@ void showPrevious(std::string errmsg) {
         errmsg.pop_back();
     }
     if (errmsg != "") {
-        printf("----------------------------------------------------------------------\n");
+        printf("---------------------------------------------------------------------------\n");
         fprintf(stderr, "%s\n", errmsg.c_str());
     }
 }
 
 void printOptions(const NPStage& stage) {
-    printf("----------------------------------------------------------------------\n");
+    printf("---------------------------------------------------------------------------\n");
     switch (static_cast<int>(stage)) {
         case 0: // init
             break;

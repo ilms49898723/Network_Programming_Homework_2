@@ -15,7 +15,7 @@ const std::string         msgOptCHAT = std::string("[T]Talk to someone  [L]List 
 const std::string    msgOptCHATGROUP = std::string("[C]Create Group     [E]Enter Group      [Q]Quit\n");
 const std::string  msgOptEDITARTICLE = std::string("[P]Change Permission  [T]Change Title  [C]Change content  [Q]Quit\n");
 const std::string       msgOptSEARCH = std::string("[S]Send Friend Request   [Q]Quit\n");
-const std::string      msgOptFRIENDS = std::string("[A]Accept Request   [R]Reject Request   [Q]Quit\n");
+const std::string      msgOptFRIENDS = std::string("[A]Accept Request   [R]Reject Request  [D]Delete Friend   [Q]Quit\n");
 
 const std::string           msgNEWCONNECTION = "NEWCONNECTION";
 const std::string                msgREGISTER = "REGISTER";
@@ -35,6 +35,7 @@ const std::string           msgUNLIKEARTICLE = "UNLIKEARTICLE";
 const std::string          msgCOMMENTARTICLE = "COMMENTARTICLE";
 const std::string      msgEDITCOMMENTARTICLE = "EDITCOMMENTARTICLE";
 const std::string    msgDELETECOMMENTARTICLE = "DELETECOMMENTARTICLE";
+const std::string      msgCHECKARTICLEACCESS = "CHECKARTICLEACCESS";
 const std::string  msgCHECKARTICLEPERMISSION = "CHECKARTICLEPERMISSION";
 
 const std::string              msgSEARCHUSER = "SEARCHUSER";
@@ -42,6 +43,7 @@ const std::string       msgSENDFRIENDREQUEST = "SENDFRIENDREQUEST";
 const std::string             msgSHOWFRIENDS = "SHOWFRIENDS";
 const std::string     msgACCEPTFRIENDREQUEST = "ACCEPTFRIENDREQUEST";
 const std::string     msgREJECTFRIENDREQUEST = "REJECTFRIENDREQUEST";
+const std::string            msgDELETEFRIEND = "DELETEFRIEND";
 
 const std::string           msgLISTCHATGROUP = "LISTCHATGROUP";
 const std::string          msgENTERCHATGROUP = "ENTERCHATGROUP";
@@ -64,7 +66,7 @@ const std::string                 msgSUCCESS = "Success!";
 const std::string                    msgFAIL = "Failed!";
 const std::string        msgPERMISSIONDENIED = "Permission Denied!";
 const std::string            msgUSERNOTFOUND = "User not found!";
-const std::string         msgARTICLENOTFOUND = "This article doesn\'t exist anymore!";
+const std::string         msgARTICLENOTFOUND = "This article didn\'t exist anymore!";
 
 const std::string                 msgTIMEOUT = "Timeout! Cannot connect to server!";
 

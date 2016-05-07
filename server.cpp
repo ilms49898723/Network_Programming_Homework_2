@@ -329,7 +329,9 @@ class ServerUtility {
                     articles.getArticle(index).permission = NPArticlePermission::SPEC;
                     std::string viewer;
                     while (iss >> viewer) {
-                        articles.getArticle(index).viewer.insert(std::make_pair(viewer, true));
+                        if (serverData.count(viewer)) {
+                            articles.getArticle(index).viewer.insert(std::make_pair(viewer, true));
+                        }
                     }
                     articles.getArticle(index).viewer.insert(std::make_pair(account, true));
                 }
@@ -712,7 +714,7 @@ class ServerUtility {
                 return;
             }
             serverData[target].friendRequest.insert(std::make_pair(source, true));
-            std::string result = "Friend Request Sent!\n";
+            std::string result = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
@@ -758,16 +760,34 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
+        static void udpDeleteFriend(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char source[MAXN];
+            char target[MAXN];
+            std::string toSend;
+            sscanf(msg.c_str(), "%*s%s%s", source, target);
+            if (serverData[source].friends.count(target) < 1) {
+                toSend = std::string(target) + " is not your friend";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            serverData[source].friends.erase(target);
+            serverData[target].friends.erase(source);
+            toSend = msgSUCCESS;
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+        }
+
         static void udpGetChatUsers(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
-            std::string toSend = "Online Users:\n";
+            std::string toSend = "User List:\n";
             std::string isFriend = "";
             std::string notFriend = "";
+            std::string offIsFriend = "";
+            std::string offNotFriend = "";
             for (const auto& who : serverData) {
                 if (who.second.isOnline) {
                     if (serverData[who.first].friends.count(account) > 0) {
-                        isFriend += std::string("    ") + who.first + " [Online] [Friends]";
+                        isFriend += std::string("    ") + who.first + " [Online] [Friend]";
                         if (!messageData[account].msgBuffer[who.first].empty()) {
                             isFriend += " [NEW!]";
                         }
@@ -781,8 +801,24 @@ class ServerUtility {
                         notFriend += "\n";
                     }
                 }
+                else {
+                    if (serverData[who.first].friends.count(account) > 0) {
+                        offIsFriend += std::string("    ") + who.first+ " [Offline] [Friend]";
+                        if (!messageData[account].msgBuffer[who.first].empty()) {
+                            offIsFriend += " [NEW!]";
+                        }
+                        offIsFriend += "\n";
+                    }
+                    else {
+                        offNotFriend += std::string("    ") + who.first + " [Offline]";
+                        if (!messageData[account].msgBuffer[who.first].empty()) {
+                            offNotFriend += " [NEW!]";
+                        }
+                        offNotFriend += "\n";
+                    }
+                }
             }
-            toSend = toSend + isFriend + notFriend + "\n";
+            toSend = toSend + isFriend + notFriend + offIsFriend + offNotFriend + "\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
@@ -914,6 +950,21 @@ class ServerUtility {
                 }
                 udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
             }
+        }
+
+        static void udpCheckArticleAccess(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            char account[MAXN];
+            int index;
+            sscanf(msg.c_str(), "%*s%s%d", account, &index);
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = msgPERMISSIONDENIED;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
+                return;
+            }
+            udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
         }
 
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
@@ -1309,6 +1360,9 @@ void serverFunc(const int& fd) {
             else if (msg.find(msgREJECTFRIENDREQUEST) == 0u) {
                 ServerUtility::udpRejectFriendRequest(fd, clientAddrp, msg);
             }
+            else if (msg.find(msgDELETEFRIEND) == 0u) {
+                ServerUtility::udpDeleteFriend(fd, clientAddrp, msg);
+            }
             else if (msg.find(msgGETCHATUSERS) == 0u) {
                 ServerUtility::udpGetChatUsers(fd, clientAddrp, msg);
             }
@@ -1326,6 +1380,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgMESSAGE) == 0u) {
                 ServerUtility::udpMessage(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgCHECKARTICLEACCESS) == 0u) {
+                ServerUtility::udpCheckArticleAccess(fd, clientAddrp, msg);
             }
             else if (msg.find(msgCHECKARTICLEPERMISSION) == 0u) {
                 ServerUtility::udpCheckArticlePermission(fd, clientAddrp, msg);
