@@ -41,13 +41,15 @@ const std::string msgSENDFRIENDREQUEST = "SENDFRIENDREQUEST";
 const std::string msgSHOWFRIENDS = "SHOWFRIENDS";
 const std::string msgACCEPTFRIENDREQUEST = "ACCEPTFRIENDREQUEST";
 const std::string msgREJECTFRIENDREQUEST = "REJECTFRIENDREQUEST";
-const std::string msgENTERCHAT = "ENTERCHAT";
-const std::string msgLEAVECHAT = "LEAVECHAT";
+const std::string msgLISTCHATGROUP = "LISTCHATGROUP";
+const std::string msgENTERCHATGROUP = "ENTERCHATGROUP";
+const std::string msgLEAVECHATGROUP = "LEAVECHATGROUP";
 const std::string msgFLUSHCHAT = "FLUSHCHAT";
 const std::string msgMESSAGE = "MESSAGE";
 const std::string msgCHATINDIVIDUAL = "INDIVIDUAL";
 const std::string msgCHATGROUP = "GROUP";
-
+const std::string msgNEWGROUP = "NEWGROUP";
+const std::string msgEXISTGROUP = "EXISTGROUP";
 const std::string msgGETCHATUSERS = "GETCHATUSERS";
 
 const std::string msgFILENEW = "FILENEW";

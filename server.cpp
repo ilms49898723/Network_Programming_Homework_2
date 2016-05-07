@@ -62,6 +62,22 @@ class MessageBuffer {
         std::map<std::string, std::deque<std::string>> msgBuffer;
 };
 
+class ChatRoom {
+    public:
+        ChatRoom() {
+            member.clear();
+            msgBuffer.clear();
+        }
+
+        virtual ~ChatRoom() {
+
+        }
+
+    public:
+        std::map<std::string, bool> member;
+        std::map<std::string, std::deque<std::string>> msgBuffer;
+};
+
 // store article
 class ArticleData {
     public:
@@ -138,6 +154,8 @@ class Articles {
 std::map<std::string, UserData> serverData;
 // map for Account --> messageBuffer
 std::map<std::string, MessageBuffer> messageData;
+// map for chatroom name --> ChatRoom
+std::map<std::string, ChatRoom> groupData;
 // articles
 Articles articles;
 
@@ -200,10 +218,19 @@ class ServerUtility {
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             serverData.erase(account);
+            // clean info in serverData
             for (auto user : serverData) {
                 user.second.friends.erase(account);
                 user.second.friendRequest.erase(account);
-                messageData.erase(account);
+            }
+            // clean messageBuffer
+            for (auto item : messageData) {
+                item.second.msgBuffer.erase(account);
+            }
+            messageData.erase(account);
+            // clean groupData
+            for (auto item : groupData) {
+                item.second.member.erase(account);
             }
             printf("Account %s has been deleted!\n", account);
             std::string toSend = "Delete Successfully!\n";
@@ -716,18 +743,61 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
-        static void udpEnterChat(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
-            // format: ENTERCHAT individial/group source target
+        static void udpListChatGroup(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: LISTCHATGROUP account
             char account[MAXN];
-            char target[MAXN];
-            char config[MAXN];
-            sscanf(msg.c_str(), "%*s%s%s%s", config, account, target);
-            udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
+            sscanf(msg.c_str(), "%*s%s", account);
+            std::string toSend = "Groups:\n";
+            for (const auto& item : groupData) {
+                toSend += std::string("    ") + item.first + "\n";
+            }
+            udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
-        static void udpLeaveChat(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+        static void udpEnterChatGroup(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: ENTERCHATGROUP new/exist account groupname
             char account[MAXN];
-            sscanf(msg.c_str(), "%s", account);
+            char config[MAXN];
+            unsigned offset;
+            sscanf(msg.c_str(), "%*s%s%s", config, account);
+            offset = msgENTERCHATGROUP.length() + 1 +
+                     strlen(config) + 1 +
+                     strlen(account) + 1;
+            std::string groupname;
+            if (offset < msg.length()) {
+                groupname = msg.substr(offset);
+            }
+            else {
+                std::string toSend = msgFAIL + " Invalid Group Name";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            if (std::string(config) == msgNEWGROUP) {
+                if (groupData.count(groupname)) {
+                    std::string toSend = msgFAIL + " Group Name exists";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+            }
+            else {
+                if (!groupData.count(groupname)) {
+                    std::string toSend = msgFAIL + " Group not exists";
+                    udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                    return;
+                }
+            }
+            groupData[groupname].member.insert(std::make_pair(account, true));
+            std::string result = std::string("Enter Group ") + groupname + " Successfully!";
+            udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
+        }
+
+        static void udpLeaveChatGroup(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: LEAVECHATGROUP account
+            char account[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            for (auto item : groupData) {
+                item.second.member.erase(account);
+            }
             udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
         }
 
@@ -737,16 +807,20 @@ class ServerUtility {
             char target[MAXN];
             char config[MAXN];
             sscanf(msg.c_str(), "%*s%s%s%s", config, account, target);
-            if (messageData.count(account) < 1 || messageData[account].msgBuffer.count(target) < 1) {
-                std::string toSend = "";
-                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
-            }
             if (std::string(config) == msgCHATINDIVIDUAL) {
                 std::string toSend = "";
                 for (const auto& item : messageData[account].msgBuffer[target]) {
                     toSend += item + "\n";
                 }
                 messageData[account].msgBuffer[target].clear();
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+            }
+            else {
+                std::string toSend = "";
+                for (const auto& item : groupData[target].msgBuffer[account]) {
+                    toSend += item + "\n";
+                }
+                groupData[target].msgBuffer[account].clear();
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
             }
         }
@@ -774,7 +848,12 @@ class ServerUtility {
                 messageData[target].msgBuffer[account].push_back(content);
                 udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
             }
-            // TODO: group chat
+            else {
+                for (const auto& who : groupData[target].member) {
+                    groupData[target].msgBuffer[who.first].push_back(content);
+                }
+                udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
+            }
         }
 
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
@@ -1173,11 +1252,14 @@ void serverFunc(const int& fd) {
             else if (msg.find(msgGETCHATUSERS) == 0u) {
                 ServerUtility::udpGetChatUsers(fd, clientAddrp, msg);
             }
-            else if (msg.find(msgENTERCHAT) == 0u) {
-                ServerUtility::udpEnterChat(fd, clientAddrp, msg);
+            else if (msg.find(msgLISTCHATGROUP) == 0u) {
+                ServerUtility::udpListChatGroup(fd, clientAddrp, msg);
             }
-            else if (msg.find(msgLEAVECHAT) == 0u) {
-                ServerUtility::udpLeaveChat(fd, clientAddrp, msg);
+            else if (msg.find(msgENTERCHATGROUP) == 0u) {
+                ServerUtility::udpEnterChatGroup(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgLEAVECHATGROUP) == 0u) {
+                ServerUtility::udpLeaveChatGroup(fd, clientAddrp, msg);
             }
             else if (msg.find(msgFLUSHCHAT) == 0u) {
                 ServerUtility::udpFlushChat(fd, clientAddrp, msg);
