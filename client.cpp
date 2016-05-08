@@ -289,6 +289,9 @@ class ClientUtility {
                     break;
                 }
                 trimNewLine(command);
+                for (char* ptr = command; *ptr; ++ptr) {
+                    *ptr = toupper(*ptr);
+                }
                 if (std::string(command) == "P") {
                     printf("Set permission(1:public, 2:author, 3:friend, 4:specific): ");
                     msg = msgEDITARTICLE + " 0 " + std::to_string(index);
