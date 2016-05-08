@@ -5,6 +5,7 @@
 #include <cstring>
 #include <memory.h>
 #include "npinc.h"
+#include "nputility.h"
 
 class UDPSeqCounter {
     public:

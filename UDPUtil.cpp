@@ -35,6 +35,8 @@ UDPUtil::~UDPUtil() {
 }
 
 int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char* src, size_t sn) {
+    // init timeout
+    setSocketTimeout(fd, 0, 100);
     socklen_t sockLen = sizeof(*sockp);
     unsigned long long thisSeq = cnt.getSeq();
     cnt.incSeq();
@@ -56,10 +58,22 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
     int byteRecv;
     counter = 0;
     while (true) {
+        if (counter < 10) {
+            setSocketTimeout(fd, 0, 100); // init
+        }
+        else if (counter < 15) {
+            setSocketTimeout(fd, 0, 200); // retry 10 times
+        }
+        else if (counter < 20) {
+            setSocketTimeout(fd, 0, 500); // retry 15 times
+        }
+        else {
+            setSocketTimeout(fd, 0, 800); // maybe timeout
+        }
         memset(toRecv, 0, sizeof(toRecv));
         byteRecv = recvfrom(fd, toRecv, PMAXN, 0, sockp, &sockLen);
         ++counter;
-        if (counter > 20) {
+        if (counter > 25) {
             fprintf(stderr, "Timeout! Can\'t connect to server or server is too busy\n");
             fprintf(stderr, "Please try again later\n");
             return -1;

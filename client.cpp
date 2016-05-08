@@ -1379,7 +1379,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
     char buffer[MAXN];
     // fd_set initialize
     fd_set fdset;
-    int maxfdp1 = fd + 1;
+    int maxfdp1 = std::max(fd, fileno(stdin)) + 1;
     FD_ZERO(&fdset);
     // server sockaddr*
     sockaddr* serverAddrp = reinterpret_cast<sockaddr*>(&serverAddr);
@@ -1390,12 +1390,19 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
     showContent(buffer);
     nowStage = NPStage::WELCOME;
     // loop to select
+    bool refreshFlag = true;
     for ( ; ; ) {
-        printOptions(nowStage);
+        if (refreshFlag) {
+            printOptions(nowStage);
+            refreshFlag = false;
+        }
         // set socket fd
         FD_SET(fd, &fdset);
         FD_SET(fileno(stdin), &fdset);
-        int nready = select(maxfdp1, &fdset, NULL, NULL, NULL);
+        timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 200000;
+        int nready = select(maxfdp1, &fdset, NULL, NULL, &tv);
         if (nready < 0) {
             if (errno == EINTR) {
                 continue;
@@ -1404,7 +1411,13 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                 fprintf(stderr, "select: %s\n", strerror(errno));
             }
         }
+        if (FD_ISSET(fd, &fdset)) {
+            char recvLine[MAXN * 2];
+            socklen_t servLen = sizeof(*serverAddrp);
+            recvfrom(fd, recvLine, MAXN * 2, 0, serverAddrp, &servLen);
+        }
         if (FD_ISSET(fileno(stdin), &fdset)) {
+            refreshFlag = true;
             memset(buffer, 0, sizeof(buffer));
             while (fgets(buffer, MAXN, stdin) == NULL) {
                 continue;
