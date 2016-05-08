@@ -31,6 +31,9 @@
 client
 server
 
-# executable generate files
+# server, client generate files
 Upload/
 Download/
+Server/
+Client/
+

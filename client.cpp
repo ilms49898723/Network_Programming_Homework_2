@@ -992,8 +992,8 @@ class ClientUtility {
                 return;
             }
             printf("%s\n", buffer);
-            printf("Type \"/upload\" to Upload File\n");
-            printf("Type \"/download\" to Download File\n");
+            printf("Type \"/upload <file>\" to Upload File\n");
+            printf("Type \"/download <file>\" to Download File\n");
             printf("Press ^D to exit\n");
             msg = msgFLUSHCHAT + " " + msgCHATGROUP + " " + nowAccount + " " + groupname;
             fd_set fdset;
@@ -1090,7 +1090,7 @@ class ClientUtility {
             std::string filename, localFilename;
             snprintf(filenameCStr, MAXN, "%s", argu.c_str());
             filename = filenameCStr;
-            localFilename = std::string("Download/") + filenameCStr;
+            localFilename = std::string("Client/") + filenameCStr;
             struct stat fileStat;
             if (stat(localFilename.c_str(), &fileStat) < 0) {
                 fprintf(stderr, "%s: %s\n", filename.c_str(), strerror(errno));
@@ -1189,7 +1189,7 @@ class ClientUtility {
             std::string msg;
             snprintf(filenameCStr, MAXN, "%s", argu.c_str());
             filename = filenameCStr;
-            localFilename = std::string("Download/") + filename;
+            localFilename = std::string("Client/") + filename;
             msg = msgFILEREQ + " 0 " + filename;
             if (udp.udpTrans(fd, serverAddrp, recv, MAXN, msg.c_str(), msg.length()) < 0) {
                 return;
@@ -1324,6 +1324,7 @@ int main(int argc, char const** argv) {
         exit(EXIT_FAILURE);
     }
     nowAccount = "";
+    mkdir("Client", 0777);
     // socket initialize
     int socketfd;
     sockaddr_in serverAddr;

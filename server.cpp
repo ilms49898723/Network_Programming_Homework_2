@@ -1044,7 +1044,10 @@ class ServerUtility {
                      strlen(config) + 1 +
                      strlen(account) + 1 +
                      strlen(target) + 1;
-            content = std::string(account) + ": ";
+            char timeStr[MAXN];
+            time_t timeStamp = time(NULL);
+            strftime(timeStr, MAXN, "[%T]", localtime(&timeStamp));
+            content = std::string(timeStr) + std::string(account) + ": ";
             if (offset < msg.length()) {
                 content += msg.substr(offset);
             }
@@ -1105,7 +1108,7 @@ class ServerUtility {
             char filenameCStr[MAXN];
             std::string filename;
             sscanf(msg.c_str(), "%*s%s", filenameCStr);
-            filename = std::string("Upload/") + filenameCStr;
+            filename = std::string("Server/") + filenameCStr;
             if (stat(filename.c_str(), &fileStat) < 0) {
                 std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
                 udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
@@ -1126,7 +1129,7 @@ class ServerUtility {
             char filenameCStr[MAXN];
             std::string filename;
             sscanf(msg + msgFILENEW.length() + 1, "%s", filenameCStr);
-            filename = std::string("Upload/") + std::string(filenameCStr);
+            filename = std::string("Server/") + std::string(filenameCStr);
             FILE* fp = fopen(filename.c_str(), "wb");
             if (!fp) {
                 fprintf(stderr, "%s: %s", filename.c_str(), strerror(errno));
@@ -1147,7 +1150,7 @@ class ServerUtility {
             unsigned long offset;
             int byteToWrite;
             sscanf(msg + msgFILESEQ.length() + 1, "%s%lu%d", filenameCStr, &offset, &byteToWrite);
-            filename = std::string("Upload/") + filenameCStr;
+            filename = std::string("Server/") + filenameCStr;
             unsigned msgOffset = msgFILESEQ.length() + 1 +
                                  std::string(filenameCStr).length() + 1 +
                                  std::to_string(offset).length() + 1 +
@@ -1183,7 +1186,7 @@ class ServerUtility {
             unsigned long fileSize;
             unsigned long long hash;
             sscanf(msg, "%*s%s%lu%llx", filenameCStr, &fileSize, &hash);
-            filename = std::string("Upload/") + filenameCStr;
+            filename = std::string("Server/") + filenameCStr;
             struct stat fileStat;
             if (stat(filename.c_str(), &fileStat) < 0) {
                 std::string toSend = std::string(filenameCStr) + ": " + strerror(errno);
@@ -1222,7 +1225,7 @@ class ServerUtility {
                 char filenameCStr[MAXN];
                 std::string filename;
                 sscanf(msg.c_str() + offset, "%s", filenameCStr);
-                filename = std::string("Upload/") + filenameCStr;
+                filename = std::string("Server/") + filenameCStr;
                 struct stat fileStat;
                 if (stat(filename.c_str(), &fileStat) < 0) {
                     std::string toSend = msgFAIL + " " + std::string(filenameCStr) + ": " + strerror(errno);
@@ -1243,7 +1246,7 @@ class ServerUtility {
                 char filenameCStr[MAXN];
                 std::string filename;
                 sscanf(msg.c_str() + offset, "%s%lu", filenameCStr, &fileOffset);
-                filename = std::string("Upload/") + filenameCStr;
+                filename = std::string("Server/") + filenameCStr;
                 struct stat fileStat;
                 if (stat(filename.c_str(), &fileStat) < 0) {
                     std::string toSend = msgFAIL + " " + filenameCStr + ": " + strerror(errno);
@@ -1287,7 +1290,7 @@ class ServerUtility {
                 char filenameCStr[MAXN];
                 std::string filename;
                 sscanf(msg.c_str() + offset, "%s", filenameCStr);
-                filename = std::string("Upload/") + filenameCStr;
+                filename = std::string("Server/") + filenameCStr;
                 struct stat fileStat;
                 if (stat(filename.c_str(), &fileStat) < 0) {
                     std::string toSend = msgFAIL + " " + filenameCStr + ": " + strerror(errno);
@@ -1361,8 +1364,8 @@ int main(int argc, char const** argv) {
     bind(socketfd, reinterpret_cast<sockaddr*>(&serverAddr), sizeof(serverAddr));
     // set timeout
     setSocketTimeout(socketfd, 0, 200);
-    // prepare Upload folder
-    mkdir("Upload", 0777);
+    // prepare Server folder
+    mkdir("Server", 0777);
     // run server function
     serverFunc(socketfd);
     return 0;
