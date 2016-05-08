@@ -277,7 +277,7 @@ class ClientUtility {
             }
             while (true) {
                 char command[MAXN];
-                printf("%s~ ", msgOptEDITARTICLE.c_str());
+                printf("%s%s:~ ", msgOptEDITARTICLE.c_str(), nowAccount.c_str());
                 if (fgets(command, MAXN, stdin) == NULL) {
                     showPrevious();
                     break;
@@ -962,12 +962,20 @@ class ClientUtility {
             char buffer[MAXN];
             char input[MAXN];
             std::string msg;
-            printf("Group Name: ");
-            if (fgets(groupname, MAXN, stdin) == NULL) {
-                showPrevious();
-                return;
+            while (true) {
+                printf("Group Name: ");
+                if (fgets(groupname, MAXN, stdin) == NULL) {
+                    showPrevious();
+                    return;
+                }
+                trimNewLine(groupname);
+                if (!isValidString(groupname)) {
+                    printf("Group name cannot contain space or tab character\n");
+                }
+                else {
+                    break;
+                }
             }
-            trimNewLine(groupname);
             if (config == "C") {
                 msg = msgENTERCHATGROUP + " " + msgNEWGROUP + " " + nowAccount + " " + groupname;
             }
@@ -1271,11 +1279,11 @@ class ClientUtility {
                 }
             }
             for (char c : str) {
-                if (c != '\n') {
-                    return true;
+                if (c == '\n') {
+                    return false;
                 }
             }
-            return false;
+            return true;
         }
 
         static void processArgument(char* dst, const char* src) {
@@ -1366,7 +1374,7 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
         }
         if (FD_ISSET(fileno(stdin), &fdset)) {
             memset(buffer, 0, sizeof(buffer));
-            if (fgets(buffer, MAXN, stdin) == NULL) {
+            while (fgets(buffer, MAXN, stdin) == NULL) {
                 continue;
             }
             trimNewLine(buffer);

@@ -213,7 +213,8 @@ class ServerUtility {
             sscanf(msg.c_str(), "%*s%s", account);
             snprintf(buffer, MAXN, "%s Logout Success!", msgSUCCESS.c_str());
             serverData[account].isOnline = false;
-            printf("Account %s logout at %s", account, asctime(localtime(&serverData[account].lastLogin)));
+            time_t timeStamp = time(NULL);
+            printf("Account %s logout at %s", account, asctime(localtime(&timeStamp)));
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
 
@@ -947,6 +948,10 @@ class ServerUtility {
                     return;
                 }
             }
+            std::string msgToOtherMember = std::string("[!] ") + account + " entered!";
+            for (auto& item : groupData[groupname].msgBuffer) {
+                item.second.push_back(msgToOtherMember);
+            }
             groupData[groupname].member.insert(std::make_pair(account, true));
             std::string result = std::string("Enter Group ") + groupname + " Successfully!";
             printf("%s entered chat group %s\n", account, groupname.c_str());
@@ -957,6 +962,16 @@ class ServerUtility {
             // format: LEAVECHATGROUP account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
+            std::string msgToOtherMember = std::string("[!] ") + account + " left!";
+            for (auto& item : groupData) {
+                if (item.second.member.count(account)) {
+                    for (auto& members : item.second.msgBuffer) {
+                        if (members.first != account) {
+                            members.second.push_back(msgToOtherMember);
+                        }
+                    }
+                }
+            }
             for (auto& item : groupData) {
                 item.second.member.erase(account);
                 item.second.msgBuffer.erase(account);
@@ -980,7 +995,25 @@ class ServerUtility {
             char account[MAXN];
             char target[MAXN];
             char config[MAXN];
-            sscanf(msg.c_str(), "%*s%s%s%s", config, account, target);
+            unsigned offset;
+            std::string targetn;
+            sscanf(msg.c_str(), "%*s%s%s", config, account);
+            offset = msgFLUSHCHAT.length() + 1 +
+                     strlen(config) + 1 +
+                     strlen(account) + 1;
+            if (offset < msg.length()) {
+                targetn = msg.substr(offset);
+            }
+            else {
+                targetn = "";
+            }
+            if (targetn.length() <= 0) {
+                std::string toSend = "";
+                udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
+                return;
+            }
+            memset(target, 0, sizeof(target));
+            snprintf(target, MAXN, "%s", targetn.c_str());
             if (std::string(config) == msgCHATINDIVIDUAL) {
                 std::string toSend = "";
                 for (const auto& item : messageData[account].msgBuffer[target]) {
