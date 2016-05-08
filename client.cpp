@@ -27,6 +27,7 @@ class ClientUtility {
             // format: REGISTER account password
             char account[MAXN];
             char password[MAXN];
+            char passwordConfirm[MAXN];
             char buffer[MAXN];
             printf("Account: ");
             if (fgets(account, MAXN, stdin) == NULL) {
@@ -35,13 +36,18 @@ class ClientUtility {
             }
             trimNewLine(account);
             if (!isValidString(account)) {
-                showPrevious("Account can not contain space or tab character");
+                showPrevious("Account cannot contain space or tab character");
                 return;
             }
             strcpy(password, getpass("Password: "));
             trimNewLine(password);
             if (!isValidString(password)) {
-                showPrevious("Password can not contain space or tab character");
+                showPrevious("Password cannot contain space or tab character");
+                return;
+            }
+            strcpy(passwordConfirm, getpass("Confirm Password: "));
+            if (std::string(password) != std::string(passwordConfirm)) {
+                showPrevious("Passwords didn\'t match");
                 return;
             }
             std::string msg = msgREGISTER + " " + account + " " + password;
@@ -375,6 +381,17 @@ class ClientUtility {
         static void udpDeleteArticle(const int& fd, sockaddr*& serverAddrp) {
             // exception: PERMISSION DENIED
             // format: DELETEARTICLE account index
+            char userConfirm[MAXN];
+            printf("ARE YOU SURE?(yes/no): ");
+            if (fgets(userConfirm, MAXN, stdin) == NULL) {
+                showPrevious("CANCELED");
+                return;
+            }
+            trimNewLine(userConfirm);
+            if (std::string(userConfirm) != "yes") {
+                showPrevious("CANCELED");
+                return;
+            }
             std::string msg = msgDELETEARTICLE + " " + nowAccount + " " + std::to_string(nowArticleIndex);
             char buffer[MAXN];
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
@@ -809,6 +826,17 @@ class ClientUtility {
             char buffer[MAXN];
             if (fgets(target, MAXN, stdin) == NULL) {
                 showPrevious();
+                return;
+            }
+            char userConfirm[MAXN];
+            printf("ARE YOU SURE?(yes/no): ");
+            if (fgets(userConfirm, MAXN, stdin) == NULL) {
+                showPrevious("CANCELED");
+                return;
+            }
+            trimNewLine(userConfirm);
+            if (std::string(userConfirm) != "yes") {
+                showPrevious("CANCELED");
                 return;
             }
             trimNewLine(target);
@@ -1394,13 +1422,13 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     showPrevious("Invalid Command\n");
                     break;
                 case 1: // welcome
-                    if (command.find("Q") == 0u) {
+                    if (command.find("Q") == 0u && command.length() == 1) {
                         return;
                     }
-                    else if (command.find("L") == 0u) {
+                    else if (command.find("L") == 0u && command.length() == 1) {
                         ClientUtility::udpLogin(fd, serverAddrp);
                     }
-                    else if (command.find("R") == 0u) {
+                    else if (command.find("R") == 0u && command.length() == 1) {
                         ClientUtility::udpRegister(fd, serverAddrp);
                     }
                     else {
@@ -1408,37 +1436,44 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     break;
                 case 2: // main
-                    if (command.find("L") == 0u) {
+                    if (command.find("L") == 0u && command.length() == 1) {
                         ClientUtility::udpLogout(fd, serverAddrp);
                     }
-                    else if (command.find("Q") == 0u) {
+                    else if (command.find("Q") == 0u && command.length() == 1) {
                         ClientUtility::udpLogout(fd, serverAddrp);
                     }
-                    else if (command.find("DA") == 0u) {
+                    else if (command.find("DA") == 0u && command.length() == 2) {
                         ClientUtility::udpDeleteAccount(fd, serverAddrp);
                     }
-                    else if (command.find("SP") == 0u) {
+                    else if (command.find("W") == 0u && command.length() == 1) {
+                        time_t timeStamp = time(NULL);
+                        std::string timeStr = asctime(localtime(&timeStamp));
+                        std::string welcomeMsg = std::string("Welcome! ") + nowAccount + "\n\n" +
+                                                 std::string("Current Time: ") + std::string(timeStr) + "\n";
+                        showContent(welcomeMsg);
+                    }
+                    else if (command.find("SP") == 0u && command.length() == 2) {
                         ClientUtility::udpShowProfile(fd, serverAddrp);
                     }
-                    else if (command.find("SE") == 0u) {
+                    else if (command.find("SE") == 0u && command.length() == 2) {
                         ClientUtility::udpSetProfile(fd, serverAddrp);
                     }
-                    else if (command.find("SA") == 0u) {
+                    else if (command.find("SA") == 0u && command.length() == 2) {
                         ClientUtility::udpShowArticle(fd, serverAddrp);
                     }
-                    else if (command.find("A") == 0u) {
+                    else if (command.find("A") == 0u && command.length() == 1) {
                         ClientUtility::udpAddArticle(fd, serverAddrp);
                     }
-                    else if (command.find("E") == 0u) {
+                    else if (command.find("E") == 0u && command.length() == 1) {
                         ClientUtility::udpEnterArticle(fd, serverAddrp);
                     }
-                    else if (command.find("F") == 0u) {
+                    else if (command.find("F") == 0u && command.length() == 1) {
                         ClientUtility::udpShowFriends(fd, serverAddrp);
                     }
-                    else if (command.find("S") == 0u) {
+                    else if (command.find("S") == 0u && command.length() == 1) {
                         ClientUtility::udpSearchUser(fd, serverAddrp);
                     }
-                    else if (command.find("C") == 0u) {
+                    else if (command.find("C") == 0u && command.length() == 1) {
                         ClientUtility::udpGetChatUsers(fd, serverAddrp);
                     }
                     else {
@@ -1446,30 +1481,34 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     break;
                 case 3: // article
-                    if (command.find("Q") == 0u) {
+                    if (command.find("Q") == 0u && command.length() == 1) {
                         nowArticleIndex = -1;
                         nowStage =NPStage::MAIN;
-                        showContent("Welcome " + nowAccount + "\n\n");
+                        time_t timeStamp = time(NULL);
+                        std::string timeStr = asctime(localtime(&timeStamp));
+                        std::string welcomeMsg = std::string("Welcome! ") + nowAccount + "\n\n" +
+                                                 std::string("Current Time: ") + std::string(timeStr) + "\n";
+                        showContent(welcomeMsg);
                     }
-                    else if (command.find("C") == 0u) {
+                    else if (command.find("C") == 0u && command.length() == 1) {
                         ClientUtility::udpCommentArticle(fd, serverAddrp);
                     }
-                    else if (command.find("EC") == 0u) {
+                    else if (command.find("EC") == 0u && command.length() == 2) {
                         ClientUtility::udpEditCommentArticle(fd, serverAddrp);
                     }
-                    else if (command.find("DC") == 0u) {
+                    else if (command.find("DC") == 0u && command.length() == 2) {
                         ClientUtility::udpDeleteCommentArticle(fd, serverAddrp);
                     }
-                    else if (command.find("L") == 0u) {
+                    else if (command.find("L") == 0u && command.length() == 1) {
                         ClientUtility::udpLikeArticle(fd, serverAddrp);
                     }
-                    else if (command.find("UL") == 0u) {
+                    else if (command.find("UL") == 0u && command.length() == 2) {
                         ClientUtility::udpUnlikeArticle(fd, serverAddrp);
                     }
-                    else if (command.find("E") == 0u) {
+                    else if (command.find("E") == 0u && command.length() == 1) {
                         ClientUtility::udpEditArticle(fd, serverAddrp);
                     }
-                    else if (command.find("D") == 0u) {
+                    else if (command.find("D") == 0u && command.length() == 1) {
                         ClientUtility::udpDeleteArticle(fd, serverAddrp);
                     }
                     else {
@@ -1477,11 +1516,15 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     break;
                 case 4: // search
-                    if (command.find("Q") == 0u) {
+                    if (command.find("Q") == 0u && command.length() == 1) {
                         nowStage = NPStage::MAIN;
-                        showContent("Welcome " + nowAccount + "\n\n");
+                        time_t timeStamp = time(NULL);
+                        std::string timeStr = asctime(localtime(&timeStamp));
+                        std::string welcomeMsg = std::string("Welcome! ") + nowAccount + "\n\n" +
+                                                 std::string("Current Time: ") + std::string(timeStr) + "\n";
+                        showContent(welcomeMsg);
                     }
-                    else if (command.find("S") == 0u) {
+                    else if (command.find("S") == 0u && command.length() == 1) {
                         ClientUtility::udpSendFriendRequest(fd, serverAddrp);
                     }
                     else {
@@ -1489,17 +1532,21 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     break;
                 case 5: // friends
-                    if (command.find("Q") == 0u) {
+                    if (command.find("Q") == 0u && command.length() == 1) {
                         nowStage = NPStage::MAIN;
-                        showContent("Welcome " + nowAccount + "\n\n");
+                        time_t timeStamp = time(NULL);
+                        std::string timeStr = asctime(localtime(&timeStamp));
+                        std::string welcomeMsg = std::string("Welcome! ") + nowAccount + "\n\n" +
+                                                 std::string("Current Time: ") + std::string(timeStr) + "\n";
+                        showContent(welcomeMsg);
                     }
-                    else if (command.find("A") == 0u) {
+                    else if (command.find("A") == 0u && command.length() == 1) {
                         ClientUtility::udpAcceptFrientRequest(fd, serverAddrp);
                     }
-                    else if (command.find("R") == 0u) {
+                    else if (command.find("R") == 0u && command.length() == 1) {
                         ClientUtility::udpRejectFriendRequest(fd, serverAddrp);
                     }
-                    else if (command.find("D") == 0u) {
+                    else if (command.find("D") == 0u && command.length() == 1) {
                         ClientUtility::udpDeleteFriend(fd, serverAddrp);
                     }
                     else {
@@ -1507,14 +1554,18 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     break;
                 case 6: // chat
-                    if (command.find("Q") == 0u) {
+                    if (command.find("Q") == 0u && command.length() == 1) {
                         nowStage = NPStage::MAIN;
-                        showContent("Welcome " + nowAccount + "\n\n");
+                        time_t timeStamp = time(NULL);
+                        std::string timeStr = asctime(localtime(&timeStamp));
+                        std::string welcomeMsg = std::string("Welcome! ") + nowAccount + "\n\n" +
+                                                 std::string("Current Time: ") + std::string(timeStr) + "\n";
+                        showContent(welcomeMsg);
                     }
-                    else if (command.find("T") == 0u) {
+                    else if (command.find("T") == 0u && command.length() == 1) {
                         ClientUtility::udpChatIndividual(fd, serverAddrp);
                     }
-                    else if (command.find("L") == 0u) {
+                    else if (command.find("L") == 0u && command.length() == 1) {
                         ClientUtility::udpListChatGroup(fd, serverAddrp);
                     }
                     else {
@@ -1522,13 +1573,13 @@ void clientFunc(const int& fd, sockaddr_in serverAddr) {
                     }
                     break;
                 case 7: // char group
-                    if (command.find("Q") == 0u) {
+                    if (command.find("Q") == 0u && command.length() == 1) {
                         ClientUtility::udpGetChatUsers(fd, serverAddrp);
                     }
-                    else if (command.find("C") == 0u) {
+                    else if (command.find("C") == 0u && command.length() == 1) {
                         ClientUtility::udpChatGroup(fd, serverAddrp, "C");
                     }
-                    else if (command.find("E") == 0u) {
+                    else if (command.find("E") == 0u && command.length() == 1) {
                         ClientUtility::udpChatGroup(fd, serverAddrp, "E");
                     }
                     else {
@@ -1569,13 +1620,13 @@ void showPrevious(std::string errmsg) {
         errmsg.pop_back();
     }
     if (errmsg != "") {
-        printf("---------------------------------------------------------------------------\n");
+        printf("----------------------------------------------------------------------------\n");
         fprintf(stderr, "%s\n", errmsg.c_str());
     }
 }
 
 void printOptions(const NPStage& stage) {
-    printf("---------------------------------------------------------------------------\n");
+    printf("----------------------------------------------------------------------------\n");
     switch (static_cast<int>(stage)) {
         case 0: // init
             break;

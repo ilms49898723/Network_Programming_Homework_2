@@ -463,23 +463,24 @@ class ServerUtility {
             char account[MAXN];
             char buffer[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
-            std::string toSend = "Index   Time                       Title                          Author\n";
+            std::string toSend = "Index   Time            Title                                Author\n";
             for (const auto& item : articles.getAllArticles()) {
                 if (!canViewArticle(account, item.second)) {
                     continue;
                 }
                 snprintf(buffer, MAXN, "%5d", item.first);
                 toSend += std::string(buffer) + "   ";
-                snprintf(buffer, MAXN, "%-26s", asctime(localtime(&item.second.timeStamp)));
-                for (char* ptr = buffer; *ptr; ++ptr) {
-                    if (*ptr == '\n') {
-                        *ptr = ' ';
-                    }
+                // 05/08 18:11:46
+                strftime(buffer, MAXN, "%m/%d %T", localtime(&item.second.timeStamp));
+                toSend += std::string(buffer) + "  ";
+                if (item.second.title.length() > 35) {
+                    snprintf(buffer, MAXN, "%.35s", item.second.title.c_str());
                 }
-                toSend += std::string(buffer) + " ";
-                snprintf(buffer, MAXN, "%-30s", item.second.title.c_str());
-                toSend += std::string(buffer) + " ";
-                snprintf(buffer, MAXN, "%s", item.second.author.c_str());
+                else {
+                    snprintf(buffer, MAXN, "%-35s", item.second.title.c_str());
+                }
+                toSend += std::string(buffer) + "  ";
+                snprintf(buffer, MAXN, "%.15s", item.second.author.c_str());
                 toSend += std::string(buffer) + "\n";
             }
             toSend += "\n";
@@ -948,7 +949,10 @@ class ServerUtility {
                     return;
                 }
             }
-            std::string msgToOtherMember = std::string("[!] ") + account + " entered!";
+            char timeStr[MAXN];
+            time_t timeStamp = time(NULL);
+            strftime(timeStr, MAXN, "[%T]", localtime(&timeStamp));
+            std::string msgToOtherMember = std::string(timeStr) + std::string("[!] ") + account + " entered!";
             for (auto& item : groupData[groupname].msgBuffer) {
                 item.second.push_back(msgToOtherMember);
             }
@@ -962,7 +966,10 @@ class ServerUtility {
             // format: LEAVECHATGROUP account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
-            std::string msgToOtherMember = std::string("[!] ") + account + " left!";
+            char timeStr[MAXN];
+            time_t timeStamp = time(NULL);
+            strftime(timeStr, MAXN, "[%T]", localtime(&timeStamp));
+            std::string msgToOtherMember = std::string(timeStr) + std::string("[!] ") + account + " left!";
             for (auto& item : groupData) {
                 if (item.second.member.count(account)) {
                     for (auto& members : item.second.msgBuffer) {

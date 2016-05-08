@@ -4,7 +4,7 @@
 #include <string>
 
 const std::string      msgOptWELCOME = std::string("[L]Login    [R]Register    [Q]Quit\n");
-const std::string         msgOptMAIN = std::string("[SP]Show Profile    [SE]Set Profile\n") +
+const std::string         msgOptMAIN = std::string("[SP]Show Profile    [SE]Set Profile     [W]Welcome Message\n") +
                                        std::string("[SA]Show Article    [A]Add Article      [E]Enter Article\n") +
                                        std::string("[F]Friends          [C]Chat             [S]Search User\n") +
                                        std::string("[DA]Delete Account  [L/Q]Logout\n");
