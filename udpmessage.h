@@ -38,6 +38,7 @@ const std::string    msgDELETECOMMENTARTICLE = "DELETECOMMENTARTICLE";
 const std::string      msgCHECKARTICLEACCESS = "CHECKARTICLEACCESS";
 const std::string  msgCHECKARTICLEPERMISSION = "CHECKARTICLEPERMISSION";
 
+const std::string          msgCHECKUSEREXIST = "CHECKUSEREXIST";
 const std::string              msgSEARCHUSER = "SEARCHUSER";
 const std::string       msgSENDFRIENDREQUEST = "SENDFRIENDREQUEST";
 const std::string             msgSHOWFRIENDS = "SHOWFRIENDS";
@@ -64,6 +65,7 @@ const std::string          msgCHECKFILEEXIST = "CHECKFILEEXIST";
 
 const std::string                 msgSUCCESS = "Success!";
 const std::string                    msgFAIL = "Failed!";
+const std::string              msgPROCESSING = "SERVERPROCESSING!";
 const std::string        msgPERMISSIONDENIED = "Permission Denied!";
 const std::string            msgUSERNOTFOUND = "User not found!";
 const std::string         msgARTICLENOTFOUND = "This article didn\'t exist anymore!";

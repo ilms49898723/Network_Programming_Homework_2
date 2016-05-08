@@ -162,13 +162,14 @@ Articles articles;
 class ServerUtility {
     public:
         static void udpRegister(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: REGISTER account password
             char account[MAXN];
             char password[MAXN];
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             sscanf(msg.c_str(), "%*s%s%s", account, password);
             if (serverData.count(account)) {
-                snprintf(buffer, MAXN, "Account %s already exists\n", account);
+                snprintf(buffer, MAXN, "%s Account %s already exists", msgFAIL.c_str(), account);
             }
             else {
                 serverData[account].password = password;
@@ -176,23 +177,24 @@ class ServerUtility {
                 serverData[account].lastLogin = time(NULL);
                 serverData[account].name = account;
                 serverData[account].birthday = "???";
-                snprintf(buffer, MAXN, "Register Success\n");
+                snprintf(buffer, MAXN, "%s Register Successfully", msgSUCCESS.c_str());
                 printf("New Account %s added\n", account);
             }
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
 
         static void udpLogin(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: LOGIN accout password
             char account[MAXN];
             char password[MAXN];
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             sscanf(msg.c_str(), "%*s%s%s", account, password);
             if (!serverData.count(account) || serverData[account].password != password) {
-                snprintf(buffer, MAXN, "Invalid account or password\n");
+                snprintf(buffer, MAXN, "%s Invalid account or password", msgFAIL.c_str());
             }
             else {
-                snprintf(buffer, MAXN, "Login Success!\n\nWelcome %s\nLast Login %s\n",
+                snprintf(buffer, MAXN, "%s Login Success!\n\nWelcome %s\nLast Login: %s", msgSUCCESS.c_str(),
                         serverData[account].name == "" ? account : serverData[account].name.c_str(),
                         asctime(localtime(&serverData[account].lastLogin)));
                 serverData[account].isOnline = true;
@@ -204,17 +206,19 @@ class ServerUtility {
         }
 
         static void udpLogout(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: LOGOUT account
             char account[MAXN];
             char buffer[MAXN];
             memset(buffer, 0, sizeof(buffer));
             sscanf(msg.c_str(), "%*s%s", account);
-            snprintf(buffer, MAXN, "Logout Success!\n\n");
+            snprintf(buffer, MAXN, "%s Logout Success!", msgSUCCESS.c_str());
             serverData[account].isOnline = false;
             printf("Account %s logout at %s", account, asctime(localtime(&serverData[account].lastLogin)));
             udp.udpSend(fd, clientAddrp, buffer, strlen(buffer));
         }
 
         static void udpDeleteAccount(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: DELETE account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             serverData.erase(account);
@@ -267,16 +271,18 @@ class ServerUtility {
                 }
             }
             printf("Account %s has been deleted!\n", account);
-            std::string toSend = "Account Delete Successfully!\n";
+            std::string toSend = msgSUCCESS + " Account Deleted Successfully!";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
         static void udpShowProfile(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format:: SHOWPROFILE account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             std::string regDate = asctime(localtime(&serverData[account].registerDate));
             std::string lastDate = asctime(localtime(&serverData[account].lastLogin));
-            std::string toSend = std::string("Account: ") + account + "\n" +
+            std::string toSend = msgSUCCESS + " " +
+                                 std::string("Account: ") + account + "\n" +
                                  std::string("Name: ") + serverData[account].name + "\n" +
                                  std::string("Birthday: ") + serverData[account].birthday + "\n" +
                                  std::string("Register Date: ") + regDate +
@@ -285,6 +291,7 @@ class ServerUtility {
         }
 
         static void udpSetProfile(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: SETPROFILE account name birthday
             char account[MAXN];
             char name[MAXN];
             char birthday[MAXN];
@@ -292,11 +299,12 @@ class ServerUtility {
             serverData[account].name = name;
             serverData[account].birthday = birthday;
             printf("Profile of account %s has been updated!\n", account);
-            std::string toSend = "Profile Setting Success!\n";
+            std::string toSend = msgSUCCESS + " Profile Setting Success!\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
         static void udpAddArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
             // format: ADDARTICLE 0 account viewerType [viewer]
             // server return a new article index
             // format: ADDARTICLE 1 index title
@@ -380,6 +388,7 @@ class ServerUtility {
         }
 
         static void udpEditArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
             // format: EDITARTICLE 0 index viewType [viewer]
             // server return result
             // format: EDITARTICLE 1 index title
@@ -429,13 +438,14 @@ class ServerUtility {
         }
 
         static void udpDeleteArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: PERMISSION DENIED
             // format: DELETEARTICLE account index
             char account[MAXN];
             int index;
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
             std::string toSend;
-            if (articles.getArticle(index).author != account ||
-                articles.getAllArticles().count(index) < 1) {
+            if (articles.getAllArticles().count(index) < 1 ||
+                articles.getArticle(index).author != account) {
                 toSend = msgPERMISSIONDENIED;
             }
             else {
@@ -447,8 +457,8 @@ class ServerUtility {
         }
 
         static void udpShowArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
             // format: SHOWARTICLE account
-            // 24 time (maybe use 27 for width)
             char account[MAXN];
             char buffer[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
@@ -476,6 +486,7 @@ class ServerUtility {
         }
 
         static void udpEnterArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: PERMISSION DENIED
             // format: ENTERARTICLE account index
             char account[MAXN];
             int index;
@@ -499,22 +510,30 @@ class ServerUtility {
             for (const auto& who : articles.getArticle(index).liker) {
                 toSend += who.first + " ";
             }
-            toSend += "\n\n";
+            toSend += "\n";
             toSend += "Comment:\n";
             for (const auto& comment : articles.getArticle(index).comment) {
                 toSend += comment + "\n";
             }
-            toSend += "\n";
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
         static void udpLikeArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: ARTICLE NOT FOUND, PERMISSION DENIED
             // format: LIKEARTICLE account index
             char account[MAXN];
             int index;
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
             if (articles.getAllArticles().count(index) < 1) {
                 std::string toS = msgARTICLENOTFOUND;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
+                return;
+            }
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = msgPERMISSIONDENIED;
                 udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
                 return;
             }
@@ -527,6 +546,7 @@ class ServerUtility {
         }
 
         static void udpUnlikeArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: ARTICLE NOT FOUND, PERMISSION DENIED
             // format: UNLIKEARTICLE account index
             char account[MAXN];
             int index;
@@ -536,12 +556,21 @@ class ServerUtility {
                 udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
                 return;
             }
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = msgPERMISSIONDENIED;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
+                return;
+            }
             articles.getArticle(index).liker.erase(account);
             std::string toSend = msgSUCCESS;
             udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
         }
 
         static void udpCommentArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: ARTICLE NOT FOUND, PERMISSION DENIED
             // format: COMMENTARTICLE account index message
             char account[MAXN];
             int index;
@@ -550,6 +579,14 @@ class ServerUtility {
             if (articles.getAllArticles().count(index) < 1) {
                 std::string toS = msgARTICLENOTFOUND;
                 udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = msgPERMISSIONDENIED;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
                 return;
             }
             offset += msgCOMMENTARTICLE.length() + 1;
@@ -569,6 +606,7 @@ class ServerUtility {
         }
 
         static void udpEditCommentArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: ARTICLE NOT FOUND, PERMISSION DENIED
             // format: EDITCOMMENTARTICLE account index message
             char account[MAXN];
             int index;
@@ -577,6 +615,14 @@ class ServerUtility {
             if (articles.getAllArticles().count(index) < 1) {
                 std::string toS = msgARTICLENOTFOUND;
                 udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = msgPERMISSIONDENIED;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
                 return;
             }
             offset += msgEDITCOMMENTARTICLE.length() + 1;
@@ -605,12 +651,22 @@ class ServerUtility {
         }
 
         static void udpDeleteCommentArticle(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: ARTICLE NOT FOUND, PERMISSION DENIED
+            // format: DELETECOMMENTARTICLE account index
             char account[MAXN];
             int index;
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
             if (articles.getAllArticles().count(index) < 1) {
                 std::string toS = msgARTICLENOTFOUND;
                 udp.udpSend(fd, clientAddrp, msg.c_str(), msg.length());
+                return;
+            }
+            if (index >= articles.getIndex() ||
+                index < 0 ||
+                articles.getAllArticles().count(index) < 1 ||
+                !canViewArticle(account, articles.getArticle(index))) {
+                std::string toS = msgPERMISSIONDENIED;
+                udp.udpSend(fd, clientAddrp, toS.c_str(), toS.length());
                 return;
             }
             int pos = -1;
@@ -634,6 +690,8 @@ class ServerUtility {
         }
 
         static void udpShowFriends(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
+            // format: SHOWFRIENDS account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             std::string result = "Friends: \n";
@@ -651,7 +709,7 @@ class ServerUtility {
                 }
             }
             result += "\n";
-            result += "Requests: \n";
+            result += "Requests:\n";
             for (const auto& who : serverData[account].friendRequest) {
                 if (serverData.count(who.first) < 1) {
                     continue;
@@ -662,7 +720,20 @@ class ServerUtility {
             udp.udpSend(fd, clientAddrp, result.c_str(), result.length());
         }
 
+        static void udpCheckUserExist(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: CHECKUSEREXIST account
+            char account[MAXN];
+            sscanf(msg.c_str(), "%*s%s", account);
+            if (serverData.count(account) < 1) {
+                udp.udpSend(fd, clientAddrp, msgFAIL.c_str(), msgFAIL.length());
+            }
+            else {
+                udp.udpSend(fd, clientAddrp, msgSUCCESS.c_str(), msgSUCCESS.length());
+            }
+        }
+
         static void udpSearchUser(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
             // format: SEARCHUSER type keyword
             int type;
             unsigned pos = 0;
@@ -694,6 +765,7 @@ class ServerUtility {
         }
 
         static void udpSendFriendRequest(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: USER NOT FOUND, ALREADY SENT, ALREADY FRIENDS
             // format SENDFRIENDREQUEST src dst
             char source[MAXN];
             char target[MAXN];
@@ -719,6 +791,7 @@ class ServerUtility {
         }
 
         static void udpAcceptFrientRequest(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: USER NOT FOUND, NO FRIEND REQUEST
             // format ACCEPTFRIENDREQUEST src dst
             char source[MAXN];
             char target[MAXN];
@@ -741,6 +814,7 @@ class ServerUtility {
         }
 
         static void udpRejectFriendRequest(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: USER NOT FOUND, NO FRIEND REQUEST
             // format REJECTFRIENDREQUEST src dst
             char source[MAXN];
             char target[MAXN];
@@ -761,6 +835,8 @@ class ServerUtility {
         }
 
         static void udpDeleteFriend(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: NOT FRIENDS
+            // format: DELETEFRIEND account target
             char source[MAXN];
             char target[MAXN];
             std::string toSend;
@@ -777,6 +853,8 @@ class ServerUtility {
         }
 
         static void udpGetChatUsers(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
+            // format: GETCHATUSERS account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
             std::string toSend = "User List:\n";
@@ -823,6 +901,7 @@ class ServerUtility {
         }
 
         static void udpListChatGroup(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // no exception
             // format: LISTCHATGROUP account
             char account[MAXN];
             sscanf(msg.c_str(), "%*s%s", account);
@@ -836,6 +915,7 @@ class ServerUtility {
         }
 
         static void udpEnterChatGroup(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // exception: INVALID GROUP NAME, GROUP ALREADY EXISTS
             // format: ENTERCHATGROUP new/exist account groupname
             char account[MAXN];
             char config[MAXN];
@@ -855,14 +935,14 @@ class ServerUtility {
             }
             if (std::string(config) == msgNEWGROUP) {
                 if (groupData.count(groupname)) {
-                    std::string toSend = msgFAIL + " Group Name exists";
+                    std::string toSend = msgFAIL + " Group " + groupname + " already exists";
                     udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                     return;
                 }
             }
             else {
                 if (!groupData.count(groupname)) {
-                    std::string toSend = msgFAIL + " Group not exists";
+                    std::string toSend = msgFAIL + " Group " + groupname + " not exists";
                     udp.udpSend(fd, clientAddrp, toSend.c_str(), toSend.length());
                     return;
                 }
@@ -953,6 +1033,7 @@ class ServerUtility {
         }
 
         static void udpCheckArticleAccess(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: CHECKARTICLEACCESS account index
             char account[MAXN];
             int index;
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
@@ -968,6 +1049,7 @@ class ServerUtility {
         }
 
         static void udpCheckArticlePermission(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: CHECKARTICLEPERMISSION account index
             char account[MAXN];
             int index;
             sscanf(msg.c_str(), "%*s%s%d", account, &index);
@@ -985,6 +1067,7 @@ class ServerUtility {
         }
 
         static void udpCheckFileExist(const int& fd, sockaddr*& clientAddrp, const std::string& msg) {
+            // format: CHECKFILEEXIST filename
             struct stat fileStat;
             char filenameCStr[MAXN];
             std::string filename;
@@ -1228,7 +1311,7 @@ int main(int argc, char const** argv) {
     }
     // read port
     int port;
-    if (sscanf(argv[1], "%d", &port) != 1) {
+    if (sscanf(argv[1], "%d", &port) != 1 || !(port >= 0 && port <= 65535)) {
         fprintf(stderr, "port %s is not a valid port number\n", argv[1]);
         exit(EXIT_FAILURE);
     }
@@ -1345,6 +1428,9 @@ void serverFunc(const int& fd) {
             }
             else if (msg.find(msgDELETECOMMENTARTICLE) == 0u) {
                 ServerUtility::udpDeleteCommentArticle(fd, clientAddrp, msg);
+            }
+            else if (msg.find(msgCHECKUSEREXIST) == 0u) {
+                ServerUtility::udpCheckUserExist(fd, clientAddrp, msg);
             }
             else if (msg.find(msgSEARCHUSER) == 0u) {
                 ServerUtility::udpSearchUser(fd, clientAddrp, msg);

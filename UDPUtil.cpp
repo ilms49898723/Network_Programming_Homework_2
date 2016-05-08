@@ -125,6 +125,7 @@ int UDPUtil::udpRecv(int fd, sockaddr*& sockp, char* dst, size_t n) {
     unpack(temp);
     memcpy(dst, temp, n);
     dst[byteRecv - 20] = '\0';
+    printf("recv %s\n", dst);
     return byteRecv - 20;
 }
 

@@ -25,15 +25,20 @@ int stringHash(const char* src, size_t len) {
 }
 
 unsigned long long fileHash(const std::string& filename) {
+    struct stat fileStat;
+    if (stat(filename.c_str(), &fileStat) < 0) {
+        return 0xFFFFFFFFFFFFFFFFLL;
+    }
     FILE* fp = fopen(filename.c_str(), "rb");
     if (!fp) {
         return 0xFFFFFFFFFFFFFFFFLL;
     }
-    unsigned long long ret = 0u;
     unsigned c = 0xdefaced;
     unsigned coef = 31;
     unsigned char buffer[4];
-    while (true) {
+    unsigned long long ret = 0u;
+    ret = c * c * coef * fileStat.st_size;
+    for (int i = 0; i < 1024; ++i) {
         memset(buffer, 0, sizeof(buffer));
         int n = read(fileno(fp), buffer, sizeof(unsigned char) * 4);
         if (n <= 0) {
