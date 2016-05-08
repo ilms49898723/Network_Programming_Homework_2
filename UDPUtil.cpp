@@ -48,8 +48,8 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
     counter = 0;
     while ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) < 0) {
         counter++;
-        if (counter > 15) {
-            fprintf(stderr, "UDPUtil: sendto: %s\n",strerror(errno));
+        if (counter > 3) {
+            fprintf(stderr, "UDPUtil: udpTrans: sendto: %s\n",strerror(errno));
             return -1;
         }
     }
@@ -59,27 +59,32 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
         memset(toRecv, 0, sizeof(toRecv));
         byteRecv = recvfrom(fd, toRecv, PMAXN, 0, sockp, &sockLen);
         ++counter;
+        if (counter > 20) {
+            fprintf(stderr, "Timeout! Can\'t connect to server or server is too busy\n");
+            fprintf(stderr, "Please try again later\n");
+            return -1;
+        }
         if (byteRecv < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 bool flag = false;
-                for (int i = 0; i < 15; ++i) {
+                for (int i = 0; i < 3; ++i) {
                     if ((byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen)) >= 0) {
                         flag = true;
                         break;
                     }
                 }
                 if (!flag) {
-                    fprintf(stderr, "UDPUtil: sendto: %s\n", strerror(errno));
+                    fprintf(stderr, "UDPUtil: udpTrans: sendto: %s\n", strerror(errno));
                     return -1;
                 }
             }
             else {
-                fprintf(stderr, "UDPUtil: recvfrom: %s\n", strerror(errno));
+                fprintf(stderr, "UDPUtil: udpTrans: recvfrom: %s\n", strerror(errno));
                 return -1;
             }
         }
         else if (byteRecv < 20) {
-            continue;
+            byteSend = sendto(fd, toSend, sn + 20, 0, sockp, sockLen);
         }
         else {
             unsigned long long seq = getSeq(toRecv);
@@ -90,11 +95,6 @@ int UDPUtil::udpTrans(int fd, sockaddr*& sockp, char* dst, size_t dn, const char
                 dst[byteRecv - 20] = '\0';
                 return byteRecv - 20;
             }
-        }
-        if (counter > 30) {
-            fprintf(stderr, "Timeout! Can\'t connect to server or server is too busy\n");
-            fprintf(stderr, "Please try again later\n");
-            return -1;
         }
     }
 }
@@ -107,7 +107,7 @@ int UDPUtil::udpSend(int fd, sockaddr*& sockp, const char* src, size_t n) {
     pack(temp, lastSeq);
     int byteSend = sendto(fd, temp, n + 20, 0, sockp, sockLen);
     if (byteSend < 0) {
-        fprintf(stderr, "UDPUtil: udpSend: %s\n", strerror(errno));
+        fprintf(stderr, "UDPUtil: udpSend: sendto: %s\n", strerror(errno));
     }
     return byteSend;
 }
@@ -117,8 +117,12 @@ int UDPUtil::udpRecv(int fd, sockaddr*& sockp, char* dst, size_t n) {
     socklen_t sockLen = sizeof(*sockp);
     char temp[PMAXN];
     int byteRecv = recvfrom(fd, temp, PMAXN, 0, sockp, &sockLen);
+    if (byteRecv < 0) {
+        fprintf(stderr, "UDPUtil: udpRecv: recvfrom: %s\n", strerror(errno));
+        return -1;
+    }
     if (byteRecv < 20) {
-        fprintf(stderr, "UDPUtil: udpRecv: %s\n", strerror(errno));
+        fprintf(stderr, "UDPUtil: udpRecv: imcomplete packet\n");
         return -1;
     }
     lastSeq = getSeq(temp);
