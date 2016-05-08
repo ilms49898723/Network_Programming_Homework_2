@@ -41,14 +41,15 @@ unsigned long long fileHash(const std::string& filename) {
         return 0xFFFFFFFFFFFFFFFFLL;
     }
     unsigned c = 0xdefaced;
+    unsigned long long cl = 0xdefaceddefacedLL;
     unsigned coef = 31;
     unsigned char buffer[4];
     unsigned long long ret = 0u;
-    ret = c * c * coef * fileStat.st_size;
+    ret = static_cast<unsigned long long>(c) * c * coef * fileStat.st_size * (cl ^ fileStat.st_size);
     for (int i = 0; i < 1024; ++i) {
         memset(buffer, 0, sizeof(buffer));
         int n = read(fileno(fp), buffer, sizeof(unsigned char) * 4);
-        if (n <= 0) {
+        if (n < 4) {
             break;
         }
         unsigned tmp = (buffer[0] << 24) |
