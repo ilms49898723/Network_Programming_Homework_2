@@ -4,7 +4,14 @@ void setSocketTimeout(const int& socketfd, const int& second, const int& millise
     timeval tv;
     tv.tv_sec = second;
     tv.tv_usec = millisecond * 1000;
-    setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    if (setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+        fprintf(stderr, "setsockopt: %s\n", strerror(errno));
+    }
+    tv.tv_sec = second;
+    tv.tv_usec = millisecond * 1000;
+    if (setsockopt(socketfd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+        fprintf(stderr, "setsockopt: %s\n", strerror(errno));
+    }
 }
 
 void trimNewLine(char* src) {
