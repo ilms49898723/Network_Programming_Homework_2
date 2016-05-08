@@ -952,7 +952,7 @@ class ServerUtility {
             char timeStr[MAXN];
             time_t timeStamp = time(NULL);
             strftime(timeStr, MAXN, "[%T]", localtime(&timeStamp));
-            std::string msgToOtherMember = std::string(timeStr) + std::string("[!] ") + account + " entered!";
+            std::string msgToOtherMember = std::string(timeStr) + std::string("[!]") + account + " entered!";
             for (auto& item : groupData[groupname].msgBuffer) {
                 item.second.push_back(msgToOtherMember);
             }
@@ -969,7 +969,7 @@ class ServerUtility {
             char timeStr[MAXN];
             time_t timeStamp = time(NULL);
             strftime(timeStr, MAXN, "[%T]", localtime(&timeStamp));
-            std::string msgToOtherMember = std::string(timeStr) + std::string("[!] ") + account + " left!";
+            std::string msgToOtherMember = std::string(timeStr) + std::string("[!]") + account + " left!";
             for (auto& item : groupData) {
                 if (item.second.member.count(account)) {
                     for (auto& members : item.second.msgBuffer) {

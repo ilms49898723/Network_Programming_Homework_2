@@ -158,21 +158,21 @@ class ClientUtility {
                 showPrevious();
                 return;
             }
+            trimNewLine(name);
             if (!isValidString(name)) {
                 showPrevious("Cannot contain space or tab character");
                 return;
             }
-            trimNewLine(name);
             printf("Birthday: ");
             if (fgets(birthday, MAXN, stdin) == NULL) {
                 showPrevious();
                 return;
             }
+            trimNewLine(birthday);
             if (!isValidString(birthday)) {
                 showPrevious("Cannot contain space or tab character");
                 return;
             }
-            trimNewLine(birthday);
             char buffer[MAXN];
             std::string msg = msgSETPROFILE + " " + nowAccount + " " + name + " " + birthday;
             if (udp.udpTrans(fd, serverAddrp, buffer, MAXN, msg.c_str(), msg.length()) < 0) {
